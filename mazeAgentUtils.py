@@ -40,8 +40,10 @@ class MazeAgent():
                 dt=0.1, 
                 dx=0.02,
                 roomSize=1, 
-                gamma = 0.99, 
-                alpha=0.2):
+                gamma = 0.999, 
+                alpha=0.2,
+                doorsClosed=False,
+                velocityScale=0.16):
 
         #arguments
         self.mazeType = mazeType
@@ -52,12 +54,13 @@ class MazeAgent():
         self.stateType = stateType
         self.gamma = gamma 
         self.alpha = alpha
+        self.velocityScale = velocityScale
 
-        #initialise state
+
+        #initialise state. the agent has a position, a direction and a velocity at all times 
         self.pos = np.array([0.2,0.2])
-        self.theta = np.pi/4
-        self.velocityScale = 0.16
-        self.vel = self.velocityScale*np.array([np.sqrt(1/2),np.sqrt(1/2)])
+        self.dir = (1/np.sqrt(2)) * np.array([1,1])
+        self.vel = self.velocityScale
 
         #some attributes
         self.posHist = [] 
@@ -66,7 +69,7 @@ class MazeAgent():
         #initialise maze
         self.walls = {}
         self.initialiseMaze()
-        self.doorsClosed = False
+        self.doorsClosed = doorsClosed
 
     def runRat(self, trainTime=10, learnSR=True, plotColor='C0'):
         steps = int(trainTime / self.dt)
@@ -94,16 +97,47 @@ class MazeAgent():
             self.M = self.M + alpha * np.outer(delta, prevState)
 
     def movementPolicyUpdate(self):
-        posNew = self.pos + self.vel * self.dt
-        step = np.array([self.pos,posNew])
-        lambda_ = self.checkWallIntercepts(step)
-        self.prevPos = self.pos
-        self.pos = self.pos + lambda_ * (posNew - self.pos)
+        proposedNewPos = self.pos + self.vel * self.dir * self.dt
+        proposedStep = np.array([self.pos,proposedNewPos])
+        checkResult = self.checkWallIntercepts(proposedStep = proposedStep)
 
         if self.policy == 'randomWalk':
-            self.theta += 2*(random.random() - 0.5)*np.pi/8
-            self.theta = np.mod(self.theta,2*np.pi)
-            self.vel = self.velocityScale*np.array([np.cos(self.theta),np.sin(self.theta)])
+            if checkResult[0] != 'collisionNow': 
+                self.pos = proposedNewPos
+                randomTurnSpeed = np.random.normal(0,2*np.pi)
+                self.turn(turnAngle=randomTurnSpeed*self.dt)
+            elif checkResult[0] == 'collisionNow':
+                wall = checkResult[1]
+                self.wallBounce(wall)
+        
+        if self.policy == 'raudies':
+            if checkResult[0] == 'noImmediateCollision':
+                self.pos = proposedNewPos
+                self.vel = np.random.rayleigh(self.velocityScale)
+                randomTurnSpeed = np.random.normal(0,2*np.pi)
+                self.turn(turnAngle=randomTurnSpeed*self.dt)
+            if checkResult[0] == 'collisionNow':
+                wall = checkResult[1]
+                self.wallBounce(wall)
+            if checkResult[0] == 'collisionAhead':
+                wall = checkResult[1]
+                self.wallFollow(wall)
+                randomTurnSpeed = np.random.normal(0,2*np.pi)
+                self.turn(turnAngle=randomTurnSpeed*self.dt)
+
+        if self.policy == 'windowsScreensaver':
+            if checkResult[0] != 'collisionNow': 
+                self.pos = proposedNewPos
+            elif checkResult[0] == 'collisionNow':
+                wall = checkResult[1]
+                self.wallBounce(wall)
+
+
+
+
+
+
+        
 
     def initialiseMaze(self):
         rs = self.roomSize
@@ -116,8 +150,8 @@ class MazeAgent():
                                     [[rs,rs],[rs,0]],
                                     [[rs,0],[0,0]]])
 
-            self.xArray = np.arange(0,rs,dx)
-            self.yArray = np.arange(0,rs,dx)[::-1]
+            self.xArray = np.arange(dx/2,rs,dx)
+            self.yArray = np.arange(dx/2,rs,dx)[::-1]
             self.extent = (0,rs,0,rs)
 
         if self.mazeType == 'twoRooms': 
@@ -178,17 +212,73 @@ class MazeAgent():
             self.extent = (0,2*rs,0,2*rs)
         
         if self.mazeType == 'twoRoomPassage':
-            pass
+            self.walls['room1'] = np.array([
+                                    [[0,0],[rs,0]],
+                                    [[rs,0],[rs,rs]],
+                                    [[rs,rs],[0.6*rs,rs]],
+                                    [[0.4*rs,rs],[0,rs]],
+                                    [[0,rs],[0,0]]])
+            self.walls['room2'] = np.array([
+                                    [[rs,0],[2*rs,0]],
+                                    [[2*rs,0],[2*rs,rs]],
+                                    [[2*rs,rs],[1.6*rs,rs]],
+                                    [[1.4*rs,rs],[rs,rs]],
+                                    [[rs,rs],[rs,0]]])
+            self.walls['room3'] = np.array([
+                                    [[0,rs],[0,1.2*rs]],
+                                    [[0,1.2*rs],[2*rs,1.2*rs]],
+                                    [[2*rs,1.2*rs],[2*rs,rs]]])
+            self.walls['door13'] = np.array([[[0.4*rs,rs],[0.6*rs,rs]]])
+            self.walls['door23'] = np.array([[[1.4*rs,rs],[1.6*rs,rs]]])
+
+            self.xArray = np.arange(dx/2,2*rs,dx)
+            self.yArray = np.arange(dx/2,1.2*rs,dx)[::-1]
+            self.extent = (0,2*rs,0,1.2*rs)
 
         if self.mazeType == 'longCorridor':
-            pass
+            self.walls['room1'] = np.array([
+                                    [[0,0],[0,rs]],
+                                    [[0,rs],[rs,rs]],
+                                    [[rs,rs],[rs,0]],
+                                    [[rs,0],[0,0]]])
+            self.walls['longbarrier'] = np.array([
+                                    [[0.1*rs,0],[0.1*rs,0.9*rs]],
+                                    [[0.2*rs,rs],[0.2*rs,0.1*rs]],
+                                    [[0.3*rs,0],[0.3*rs,0.9*rs]],
+                                    [[0.4*rs,rs],[0.4*rs,0.1*rs]],
+                                    [[0.5*rs,0],[0.5*rs,0.9*rs]],
+                                    [[0.6*rs,rs],[0.6*rs,0.1*rs]],
+                                    [[0.7*rs,0],[0.7*rs,0.9*rs]],
+                                    [[0.8*rs,rs],[0.8*rs,0.1*rs]],
+                                    [[0.9*rs,0],[0.9*rs,0.9*rs]]
+            ])
+            self.pos = [0.05,0.05]
+
+            self.xArray = np.arange(dx/2,rs,dx)
+            self.yArray = np.arange(dx/2,rs,dx)[::-1]
+            self.extent = (0,rs,0,rs)
+
+        if self.mazeType == 'rectangleRoom': 
+            self.walls['room1'] = np.array([
+                                    [[0,0],[0,rs]],
+                                    [[0,rs],[1.2*rs,rs]],
+                                    [[1.2*rs,rs],[1.2*rs,0]],
+                                    [[1.2*rs,0],[0,0]]])
+
+            self.xArray = np.arange(dx/2,1.2*rs,dx)
+            self.yArray = np.arange(dx/2,rs,dx)[::-1]
+            self.extent = (0,rs,0,rs)
 
         
         self.stateVec_asMatrix = np.zeros(shape=(len(self.yArray),len(self.xArray)))
         self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
         self.M = np.eye(len(self.stateVec_asVector))
         
-
+    def turn(self, turnAngle):
+        theta_ = theta(self.dir)
+        theta_ += turnAngle
+        theta_ = np.mod(theta_, 2*np.pi)
+        self.dir = np.array([np.cos(theta_),np.sin(theta_)])
 
 
     def plotMovementHistory(self):
@@ -213,9 +303,7 @@ class MazeAgent():
         placeField = self.M[:,number].reshape(self.stateVec_asMatrix.shape)
         fig, ax = self.plotMazeStructure()
         ax.imshow(placeField,extent=self.extent,cmap='viridis',interpolation=None)
-        return fig, ax
-
-     
+        return fig, ax 
 
     def plotGridField(self,number=None):
         if number == None: number = random.randint(a=0,b=len(self.stateVec_asVector)-1)
@@ -227,15 +315,18 @@ class MazeAgent():
         ax.imshow(gridField,extent=self.extent,cmap='viridis')
         return fig, ax
 
-    def checkWallIntercepts(self,step):
-        # calculates point of intercept between the line passing along the current step direction and the lines passing along the walls,
-        # if this intercept lies on the current step and on the current wall this implies a "collision" 
-        # this occurs iff the solution to s1 + lam_s*(s2-s1) = w1 + lam_w*(w2 - w1) satisfies 0 <= lam_s & lam_w <= 1
-        s1, s2 = np.array(step[0]), np.array(step[1])
+
+    def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
+        s1, s2 = np.array(proposedStep[0]), np.array(proposedStep[1])
+        pos = s1
         ds = s2 - s1
+        stepLength = np.linalg.norm(ds)
         ds_perp = perp(ds)
 
-        earliestCollision = 1 #i.e. no collision
+        collisionList = [[],[]]
+        futureCollisionList = [[],[]]
+
+        #check if the current step results in a collision 
         for wallObject in self.walls.keys():
             if (wallObject[:4] == 'door' and self.doorsClosed == False):
                 continue
@@ -243,24 +334,61 @@ class MazeAgent():
                 w1, w2 = np.array(wall[0]), np.array(wall[1])
                 dw = w2 - w1
                 dw_perp = perp(dw)
+
+                # calculates point of intercept between the line passing along the current step direction and the lines passing along the walls,
+                # if this intercept lies on the current step and on the current wall (0 < lam_s < 1, 0 < lam_w < 1) this implies a "collision" 
+                # if it lies ahead of the current step and on the current wall (lam_s > 1, 0 < lam_w < 1) then we should "veer" away from this wall
+                # this occurs iff the solution to s1 + lam_s*(s2-s1) = w1 + lam_w*(w2 - w1) satisfies 0 <= lam_s & lam_w <= 1
                 lam_s = (np.dot(w1, dw_perp) - np.dot(s1, dw_perp)) / np.dot(ds, dw_perp)
                 lam_w = (np.dot(s1, ds_perp) - np.dot(w1, ds_perp)) / np.dot(dw, ds_perp)
-                if ((lam_s <= 1) and (lam_s >= 0)) and ((lam_w <= 1) and (lam_w >= 0)):
-                    if lam_s < earliestCollision: 
-                        earliestCollision = lam_s
-                        self.wallBounce(wall)
-        if earliestCollision < 1: 
-            return 0 #step no allowed if agent would collide during step 
+
+                #there are two situations we need to worry about: 
+                # • 0 < lam_s < 1 and 0 < lam_w < 1: the collision is ON the current proposed step . Do something immediately.
+                # • lam_s > 1     and 0 < lam_w < 1: the collision is on the current trajectory, some time in the future. Maybe do something. 
+                if (0 <= lam_s <= 1) and (0 <= lam_w <= 1):
+                    collisionList[0].append(wall)
+                    collisionList[1].append([lam_s,lam_w])
+                    continue
+
+                if (lam_s > 1) and (0 <= lam_w <= 1):
+                    if lam_s * stepLength <= 0.02: #if the future collision is under 2cm away
+                        futureCollisionList[0].append(wall)
+                        futureCollisionList[1].append([lam_s,lam_w])
+                        continue
+                
+        if len(collisionList[0]) != 0:
+            wall_id = np.argmin(np.array(collisionList[1])[:,0]) #first wall you collide with on step 
+            wall = collisionList[0][wall_id]
+            return ('collisionNow', wall)
+        
+        elif len(futureCollisionList[0]) != 0:
+            wall_id = np.argmin(np.array(futureCollisionList[1])[:,0]) #first wall you would collide with along current step 
+            wall = futureCollisionList[0][wall_id]
+            return ('collisionAhead', wall)
+        
         else:
-            return 1
+            return ('noImmediateCollision',None)
+                
+
         
     def wallBounce(self,wall):
         wallPerp = perp(wall[1] - wall[0])
-        if np.dot(wallPerp,self.vel) <= 0:
-            wallPerp = -wallPerp
-        wallTheta = theta(wallPerp)
-        self.theta = np.mod(wallTheta + np.pi - (self.theta - wallTheta), 2*np.pi)
+        if np.dot(wallPerp,self.dir) <= 0:
+            wallPerp = -wallPerp #it is now the perpendicular with smallest angle to dir 
+        wallPar = wall[1] - wall[0]
+        if np.dot(wallPar,self.dir) <= 0:
+            wallPar = -wallPar #it is now the parallel with smallest angle to dir 
+        wallPar, wallPerp = wallPar/np.linalg.norm(wallPar), wallPerp/np.linalg.norm(wallPerp) #normalise
+        dir_ = wallPar * np.dot(self.dir,wallPar) - wallPerp * np.dot(self.dir,wallPerp)
+        self.dir = dir_/np.linalg.norm(dir_)
 
+    def wallFollow(self,wall):
+        wallPar = wall[1] - wall[0]
+        if np.dot(wallPar,self.dir) <= 0:
+            wallPar = -wallPar #it is now the parallel with smallest angle to dir 
+        wallPar = wallPar/np.linalg.norm(wallPar)
+        dir_ = wallPar * np.dot(self.dir,wallPar)
+        self.dir = dir_/np.linalg.norm(dir_)
 
 
 
@@ -303,9 +431,9 @@ def perp(a=None):
 def theta(segment):
     eps = 1e-6
     if segment.shape == (2,): 
-        return np.mod(np.arctan(segment[1]/(segment[0] + eps)),2*np.pi)
+        return np.mod(np.arctan2(segment[1],(segment[0] + eps)),2*np.pi)
     elif segment.shape == (2,2):
-        return np.mod(np.arctan((segment[1][1]-segment[0][1])/(segment[1][0] - segment[0][0] + eps)), 2*np.pi)
+        return np.mod(np.arctan2((segment[1][1]-segment[0][1]),(segment[1][0] - segment[0][0] + eps)), 2*np.pi)
 
 def saveFigure(fig,saveTitle=""):
 	"""saves figure to file, by data (folder) and time (name) 
