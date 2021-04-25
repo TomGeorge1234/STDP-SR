@@ -35,15 +35,16 @@ rcParams['axes.prop_cycle']=cycler('color', ['#66c2a5','#fc8d62','#8da0cb','#e78
 class MazeAgent():
     def __init__(self, 
                 mazeType='oneRoom', 
-                policy='randomWalk',
+                policy='raudies',
                 stateType='onehot', 
                 dt=0.1, 
                 dx=0.02,
                 roomSize=1, 
-                gamma = 0.999, 
-                alpha=0.2,
+                gamma = 0.99, 
+                alpha=0.1,
                 doorsClosed=False,
-                velocityScale=0.16):
+                velocityScale=0.16,
+                rotationalVelocityScale=np.pi/2):
 
         #arguments
         self.mazeType = mazeType
@@ -55,15 +56,17 @@ class MazeAgent():
         self.gamma = gamma 
         self.alpha = alpha
         self.velocityScale = velocityScale
-
+        self.rotationalVelocityScale = rotationalVelocityScale
 
         #initialise state. the agent has a position, a direction and a velocity at all times 
         self.pos = np.array([0.2,0.2])
         self.dir = (1/np.sqrt(2)) * np.array([1,1])
         self.vel = self.velocityScale
+        self.t = 0
 
         #some attributes
         self.posHist = [] 
+        self.saveHist = ()
         self.plotColors = []
 
         #initialise maze
@@ -71,19 +74,24 @@ class MazeAgent():
         self.initialiseMaze()
         self.doorsClosed = doorsClosed
 
-    def runRat(self, trainTime=10, learnSR=True, plotColor='C0'):
+    def runRat(self, trainTime=10, learnSR=True, plotColor='C0',onehotfast=True, saveHistory=False):
         steps = int(trainTime / self.dt)
-
         self.posHist.append(np.zeros(shape=(steps,2)))
         self.plotColors.append([plotColor]*steps)
-
+        saveFreq = None 
+        if saveHistory is not False:
+            saveFreq = int(saveHistory / self.dt)
+        
         for i in tqdm(range(steps)):
+            if (saveFreq is not None) and (i %% saveFreq == 0):
+                self.saveHist.append((self.t, self.pos, self.doorsClosed, self.M))
             self.posHist[-1][i] =  self.pos
             self.movementPolicyUpdate()
             if (learnSR is True)  and (i>=1):
-                self.TDLearningStep(pos=self.pos, prevPos=self.posHist[-1][i], gamma=self.gamma, alpha=self.alpha)
+                self.TDLearningStep(pos=self.pos, prevPos=self.posHist[-1][i], gamma=self.gamma, alpha=self.alpha, onehotfast=onehotfast)
+            self.t += self.dt
 
-    def TDLearningStep(self, pos, prevPos, gamma, alpha, onehotfast=True):
+    def TDLearningStep(self, pos, prevPos, gamma, alpha, onehotfast=False):
         state = self.posToState(pos)
         prevState = self.posToState(prevPos)
         
@@ -104,7 +112,7 @@ class MazeAgent():
         if self.policy == 'randomWalk':
             if checkResult[0] != 'collisionNow': 
                 self.pos = proposedNewPos
-                randomTurnSpeed = np.random.normal(0,2*np.pi)
+                randomTurnSpeed = np.random.normal(0,self.rotationalVelocityScale)
                 self.turn(turnAngle=randomTurnSpeed*self.dt)
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
@@ -114,7 +122,7 @@ class MazeAgent():
             if checkResult[0] == 'noImmediateCollision':
                 self.pos = proposedNewPos
                 self.vel = np.random.rayleigh(self.velocityScale)
-                randomTurnSpeed = np.random.normal(0,2*np.pi)
+                randomTurnSpeed = np.random.normal(0,self.rotationalVelocityScale)
                 self.turn(turnAngle=randomTurnSpeed*self.dt)
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
@@ -122,7 +130,7 @@ class MazeAgent():
             if checkResult[0] == 'collisionAhead':
                 wall = checkResult[1]
                 self.wallFollow(wall)
-                randomTurnSpeed = np.random.normal(0,2*np.pi)
+                randomTurnSpeed = np.random.normal(0,self.rotationalVelocityScale)
                 self.turn(turnAngle=randomTurnSpeed*self.dt)
 
         if self.policy == 'windowsScreensaver':
@@ -131,13 +139,6 @@ class MazeAgent():
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.wallBounce(wall)
-
-
-
-
-
-
-        
 
     def initialiseMaze(self):
         rs = self.roomSize
@@ -215,21 +216,21 @@ class MazeAgent():
             self.walls['room1'] = np.array([
                                     [[0,0],[rs,0]],
                                     [[rs,0],[rs,rs]],
-                                    [[rs,rs],[0.6*rs,rs]],
-                                    [[0.4*rs,rs],[0,rs]],
+                                    [[rs,rs],[0.75*rs,rs]],
+                                    [[0.25*rs,rs],[0,rs]],
                                     [[0,rs],[0,0]]])
             self.walls['room2'] = np.array([
                                     [[rs,0],[2*rs,0]],
                                     [[2*rs,0],[2*rs,rs]],
-                                    [[2*rs,rs],[1.6*rs,rs]],
-                                    [[1.4*rs,rs],[rs,rs]],
+                                    [[2*rs,rs],[1.75*rs,rs]],
+                                    [[1.25*rs,rs],[rs,rs]],
                                     [[rs,rs],[rs,0]]])
             self.walls['room3'] = np.array([
-                                    [[0,rs],[0,1.2*rs]],
-                                    [[0,1.2*rs],[2*rs,1.2*rs]],
-                                    [[2*rs,1.2*rs],[2*rs,rs]]])
-            self.walls['door13'] = np.array([[[0.4*rs,rs],[0.6*rs,rs]]])
-            self.walls['door23'] = np.array([[[1.4*rs,rs],[1.6*rs,rs]]])
+                                    [[0,rs],[0,1.4*rs]],
+                                    [[0,1.4*rs],[2*rs,1.4*rs]],
+                                    [[2*rs,1.4*rs],[2*rs,rs]]])
+            self.walls['door13'] = np.array([[[0.25*rs,rs],[0.75*rs,rs]]])
+            self.walls['door23'] = np.array([[[1.25*rs,rs],[1.75*rs,rs]]])
 
             self.xArray = np.arange(dx/2,2*rs,dx)
             self.yArray = np.arange(dx/2,1.2*rs,dx)[::-1]
@@ -252,22 +253,24 @@ class MazeAgent():
                                     [[0.8*rs,rs],[0.8*rs,0.1*rs]],
                                     [[0.9*rs,0],[0.9*rs,0.9*rs]]
             ])
-            self.pos = [0.05,0.05]
+            self.pos = np.array([0.05,0.05])
+            self.dir = np.array([0,1])
 
             self.xArray = np.arange(dx/2,rs,dx)
             self.yArray = np.arange(dx/2,rs,dx)[::-1]
             self.extent = (0,rs,0,rs)
 
         if self.mazeType == 'rectangleRoom': 
+            ratio = np.pi/2.8
             self.walls['room1'] = np.array([
                                     [[0,0],[0,rs]],
-                                    [[0,rs],[1.2*rs,rs]],
-                                    [[1.2*rs,rs],[1.2*rs,0]],
-                                    [[1.2*rs,0],[0,0]]])
+                                    [[0,rs],[ratio*rs,rs]],
+                                    [[ratio*rs,rs],[ratio*rs,0]],
+                                    [[ratio*rs,0],[0,0]]])
 
-            self.xArray = np.arange(dx/2,1.2*rs,dx)
+            self.xArray = np.arange(dx/2,ratio*rs,dx)
             self.yArray = np.arange(dx/2,rs,dx)[::-1]
-            self.extent = (0,rs,0,rs)
+            self.extent = (0,ratio*rs,0,rs)
 
         
         self.stateVec_asMatrix = np.zeros(shape=(len(self.yArray),len(self.xArray)))
@@ -279,7 +282,6 @@ class MazeAgent():
         theta_ += turnAngle
         theta_ = np.mod(theta_, 2*np.pi)
         self.dir = np.array([np.cos(theta_),np.sin(theta_)])
-
 
     def plotMovementHistory(self):
         fig, ax = self.plotMazeStructure()
@@ -297,7 +299,6 @@ class MazeAgent():
             state = self.posToState(pos)
             plt.imshow(state)
 
-
     def plotPlaceField(self,number=None):
         if number == None: number = random.randint(a=0,b=len(self.stateVec_asVector)-1)
         placeField = self.M[:,number].reshape(self.stateVec_asMatrix.shape)
@@ -314,8 +315,6 @@ class MazeAgent():
         fig, ax = self.plotMazeStructure()
         ax.imshow(gridField,extent=self.extent,cmap='viridis')
         return fig, ax
-
-
     def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
         s1, s2 = np.array(proposedStep[0]), np.array(proposedStep[1])
         pos = s1
@@ -368,9 +367,7 @@ class MazeAgent():
         
         else:
             return ('noImmediateCollision',None)
-                
-
-        
+                  
     def wallBounce(self,wall):
         wallPerp = perp(wall[1] - wall[0])
         if np.dot(wallPerp,self.dir) <= 0:
@@ -390,13 +387,13 @@ class MazeAgent():
         dir_ = wallPar * np.dot(self.dir,wallPar)
         self.dir = dir_/np.linalg.norm(dir_)
 
-
-
-    def plotMazeStructure(self):
+    def plotMazeStructure(self,doorsClosed=None):
+        if doorsClosed == None:
+            doorsClosed == self.doorsClosed
         fig, ax = plt.subplots(figsize=(2,2))
         maxWall, minWall = [0,0],[0,0] 
         for wallObject in self.walls.keys():
-            if (wallObject[:4] == 'door' and self.doorsClosed == False):
+            if (wallObject[:4] == 'door' and doorsClosed == False):
                 continue
             for wall in self.walls[wallObject]:
                 ax.plot([wall[0][0],wall[1][0]],[wall[0][1],wall[1][1]],color='darkgrey',linewidth=1)
@@ -434,6 +431,13 @@ def theta(segment):
         return np.mod(np.arctan2(segment[1],(segment[0] + eps)),2*np.pi)
     elif segment.shape == (2,2):
         return np.mod(np.arctan2((segment[1][1]-segment[0][1]),(segment[1][0] - segment[0][0] + eps)), 2*np.pi)
+
+def animateHistory(MazeAgent):
+    myGrids = [] 
+    for i in range(10):
+        a = np.random.randn(10,10)
+        im = p
+
 
 def saveFigure(fig,saveTitle=""):
 	"""saves figure to file, by data (folder) and time (name) 
