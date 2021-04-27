@@ -1,13 +1,14 @@
-from numba.np.ufunc import parallel
 import numpy as np 
 import matplotlib.pyplot as plt 
 import random 
 import time 
+import matplotlib
 from tqdm.notebook import tqdm
 from matplotlib import rcParams
 from datetime import datetime 
 import os
 from cycler import cycler
+from scipy.sparse import csr_matrix
 plt.style.use("seaborn")
 rcParams['figure.dpi']= 300
 rcParams['axes.labelsize']=5
@@ -66,7 +67,7 @@ class MazeAgent():
 
         #some attributes
         self.posHist = [] 
-        self.saveHist = ()
+        self.saveHist = []
         self.plotColors = []
 
         #initialise maze
@@ -74,7 +75,7 @@ class MazeAgent():
         self.initialiseMaze()
         self.doorsClosed = doorsClosed
 
-    def runRat(self, trainTime=10, learnSR=True, plotColor='C0',onehotfast=True, saveHistory=False):
+    def runRat(self, trainTime=10, learnSR=True, plotColor='C0',onehotfast='specific',saveHistory=60):
         steps = int(trainTime / self.dt)
         self.posHist.append(np.zeros(shape=(steps,2)))
         self.plotColors.append([plotColor]*steps)
@@ -83,24 +84,31 @@ class MazeAgent():
             saveFreq = int(saveHistory / self.dt)
         
         for i in tqdm(range(steps)):
-            if (saveFreq is not None) and (i %% saveFreq == 0):
-                self.saveHist.append((self.t, self.pos, self.doorsClosed, self.M))
+            if (saveFreq is not None):
+                 if (i%saveFreq == 0):
+                    self.saveHist.append({'t':self.t, 'pos':self.pos.copy(), 'doorsClosed':self.doorsClosed, "M":self.M.copy()})
             self.posHist[-1][i] =  self.pos
             self.movementPolicyUpdate()
             if (learnSR is True)  and (i>=1):
                 self.TDLearningStep(pos=self.pos, prevPos=self.posHist[-1][i], gamma=self.gamma, alpha=self.alpha, onehotfast=onehotfast)
             self.t += self.dt
 
-    def TDLearningStep(self, pos, prevPos, gamma, alpha, onehotfast=False):
+        self.saveHist.append({'t':self.t, 'pos':self.pos.copy(), 'doorsClosed':self.doorsClosed, "M":self.M.copy()})
+
+    def TDLearningStep(self, pos, prevPos, gamma, alpha, onehotfast='specific'):
         state = self.posToState(pos)
         prevState = self.posToState(prevPos)
-        
-        if (self.stateType == 'onehot') and (onehotfast is True):
-            s_t = np.argwhere(prevState)[0][0]
-            s_tplus1 = np.argwhere(state)[0][0]
-            delta = prevState + gamma * self.M[:,s_tplus1] - self.M[:,s_t]
-            self.M[:,s_t] = self.M[:,s_t] + alpha * delta
-        else: 
+        if (self.stateType == 'onehot'): 
+            if (onehotfast in ['specific',True,'both','all']):
+                s_t = np.argwhere(prevState)[0][0]
+                s_tplus1 = np.argwhere(state)[0][0]
+                delta = prevState + gamma * self.M[:,s_tplus1] - self.M[:,s_t]
+                self.M[:,s_t] = self.M[:,s_t] + alpha * delta
+            if (onehotfast in ['sparse','both','all']):
+                state_s, prevState_s = csr_matrix(state), csr_matrix(prevState)
+                delta = prevState_s.T + (np.dot(self.M_sparse, (gamma * state_s - prevState_s).T))
+                self.M_sparse = self.M_sparse + alpha * np.dot(delta,prevState_s)
+        if (self.stateType != 'onehot'): 
             delta = prevState + (self.M @ (gamma*state - prevState))
             self.M = self.M + alpha * np.outer(delta, prevState)
 
@@ -275,7 +283,9 @@ class MazeAgent():
         
         self.stateVec_asMatrix = np.zeros(shape=(len(self.yArray),len(self.xArray)))
         self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
-        self.M = np.eye(len(self.stateVec_asVector))
+        M = np.eye(len(self.stateVec_asVector))
+        self.M = M
+        self.M_sparse = csr_matrix(M)
         
     def turn(self, turnAngle):
         theta_ = theta(self.dir)
@@ -307,6 +317,7 @@ class MazeAgent():
         return fig, ax 
 
     def plotGridField(self,number=None):
+
         if number == None: number = random.randint(a=0,b=len(self.stateVec_asVector)-1)
         _, eigvec = np.linalg.eig(self.M)
         eigvec = np.real(eigvec)
@@ -315,6 +326,7 @@ class MazeAgent():
         fig, ax = self.plotMazeStructure()
         ax.imshow(gridField,extent=self.extent,cmap='viridis')
         return fig, ax
+  
     def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
         s1, s2 = np.array(proposedStep[0]), np.array(proposedStep[1])
         pos = s1
@@ -387,6 +399,9 @@ class MazeAgent():
         dir_ = wallPar * np.dot(self.dir,wallPar)
         self.dir = dir_/np.linalg.norm(dir_)
 
+    def plot(self,i=-1):
+        return
+
     def plotMazeStructure(self,doorsClosed=None):
         if doorsClosed == None:
             doorsClosed == self.doorsClosed
@@ -396,7 +411,7 @@ class MazeAgent():
             if (wallObject[:4] == 'door' and doorsClosed == False):
                 continue
             for wall in self.walls[wallObject]:
-                ax.plot([wall[0][0],wall[1][0]],[wall[0][1],wall[1][1]],color='darkgrey',linewidth=1)
+                ax.plot([wall[0][0],wall[1][0]],[wall[0][1],wall[1][1]],color='darkgrey',linewidth=2)
                 maxWall[0] = max(maxWall[0],max(wall[:,0]))
                 minWall[0] = min(minWall[0],min(wall[:,0]))
                 maxWall[1] = max(maxWall[1],max(wall[:,1]))
@@ -408,6 +423,7 @@ class MazeAgent():
 
         return fig, ax
 
+    
     def posToState(self,pos,stateType='onehot'): #redo this?
         if stateType == 'onehot':
             xid = np.argmin(np.abs(self.xArray - pos[0]))
@@ -417,6 +433,73 @@ class MazeAgent():
             state = state.reshape(self.stateVec_asVector.shape)
         return state
 
+class Visualiser():
+    def __init__(self, mazeAgent):
+        self.mazeAgent = mazeAgent
+        self.extent = mazeAgent.extent
+        matplotlib.rc('animation', html='html5')
+
+    def plotMazeStructure(self,fig=None,ax=None,hist_id=-1):
+        if (fig, ax) == (None, None): 
+            fig, ax = plt.subplots(figsize=(2*(self.extent[1]-self.extent[0]),2*(self.extent[3]-self.extent[2])))
+        doorsClosed = self.mazeAgent.saveHist[hist_id]['doorsClosed']
+        for wallObject in self.mazeAgent.walls.keys():
+            if (wallObject[:4] == 'door' and doorsClosed == False):
+                continue
+            for wall in self.mazeAgent.walls[wallObject]:
+                ax.plot([wall[0][0],wall[1][0]],[wall[0][1],wall[1][1]],color='darkgrey',linewidth=2)
+            ax.set_xlim(left=self.extent[0]-0.05,right=self.extent[1]+0.05)
+            ax.set_ylim(bottom=self.extent[2]-0.05,top=self.extent[3]+0.05)
+        ax.set_aspect('equal')
+        ax.grid(False)
+        ax.axis('off')
+        return fig, ax
+
+    def addTimestamp(self, fig, ax, i=-1):
+        t = self.mazeAgent.saveHist[i]['t']
+        ax.text(x=0, y=0, t="%.2f" %t)
+
+    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False):
+
+        if time is not None: 
+            times = []
+            for j in range(len(self.mazeAgent.saveHist)):
+                times.append(self.mazeAgent.saveHist[j]['t'])
+            hist_id = np.argmin(np.abs(np.array(times) - time))
+
+        #if a figure/ax objects are passed, clear the axis and replot the maze
+        if (ax is not None) and (fig is not None): 
+            ax.clear()
+            self.plotMazeStructure(fig=fig, ax=ax, hist_id=hist_id)
+
+        # else if they are not passed plot the maze
+        if (fig, ax) == (None, None):
+            fig, ax = self.plotMazeStructure(hist_id=hist_id)
+        
+        if number == None: number = random.randint(a=0,b=len(self.mazeAgent.stateVec_asVector)-1)
+        
+        placeField = self.mazeAgent.saveHist[hist_id]['M'][:,number].reshape(self.mazeAgent.stateVec_asMatrix.shape)
+        ax.imshow(placeField,extent=self.extent,cmap='viridis',interpolation=None)
+        if show==False:
+            plt.close(fig)
+
+        return fig, ax 
+        
+    def animatePlaceField(self, number=0):
+        fig, ax = self.plotPlaceField(hist_id=0,number=number,show=False)
+        anim = matplotlib.animation.FuncAnimation(fig, self.plotPlaceField, fargs=(None, fig, ax, number, False, True), frames=len(self.mazeAgent.saveHist), repeat=False)
+        anim.save("./figures/animations/anim.mp4")
+        return anim
+
+ 
+    def plotGridField(self):
+        return
+    def animateLocation(self):
+        return
+
+        fig = plt.figure()
+        matplotlib.animation.FuncAnimation(fig,func,blit=False)
+        ax.plotMazeStructure
 
 
 def perp(a=None):
@@ -431,12 +514,6 @@ def theta(segment):
         return np.mod(np.arctan2(segment[1],(segment[0] + eps)),2*np.pi)
     elif segment.shape == (2,2):
         return np.mod(np.arctan2((segment[1][1]-segment[0][1]),(segment[1][0] - segment[0][0] + eps)), 2*np.pi)
-
-def animateHistory(MazeAgent):
-    myGrids = [] 
-    for i in range(10):
-        a = np.random.randn(10,10)
-        im = p
 
 
 def saveFigure(fig,saveTitle=""):
