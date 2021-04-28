@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random 
 import time 
 import matplotlib
+from numpy.lib.function_base import place
 from tqdm.notebook import tqdm
 from matplotlib import rcParams
 from datetime import datetime 
@@ -70,18 +71,26 @@ class MazeAgent():
         self.saveHist = []
         self.plotColors = []
 
+        #place field stuff
+        self.sigma1 = 0.15
+        self.sigma2 = 0.3
+        self.np = 100
+
         #initialise maze
         self.walls = {}
         self.initialiseMaze()
         self.doorsClosed = doorsClosed
+        self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType)
+
+
 
     def runRat(self, trainTime=10, learnSR=True, plotColor='C0',onehotfast='specific',saveHistory=60):
-        steps = int(trainTime / self.dt)
+        steps = int(trainTime * 60 / self.dt)
         self.posHist.append(np.zeros(shape=(steps,2)))
         self.plotColors.append([plotColor]*steps)
         saveFreq = None 
         if saveHistory is not False:
-            saveFreq = int(saveHistory / self.dt)
+            saveFreq = int(saveHistory * 60 / self.dt)
         
         for i in tqdm(range(steps)):
             if (saveFreq is not None):
@@ -96,8 +105,8 @@ class MazeAgent():
         self.saveHist.append({'t':self.t, 'pos':self.pos.copy(), 'doorsClosed':self.doorsClosed, "M":self.M.copy()})
 
     def TDLearningStep(self, pos, prevPos, gamma, alpha, onehotfast='specific'):
-        state = self.posToState(pos)
-        prevState = self.posToState(prevPos)
+        state = self.posToState(pos,stateType=self.stateType)
+        prevState = self.posToState(prevPos,stateType=self.stateType)
         if (self.stateType == 'onehot'): 
             if (onehotfast in ['specific',True,'both','all']):
                 s_t = np.argwhere(prevState)[0][0]
@@ -280,12 +289,35 @@ class MazeAgent():
             self.yArray = np.arange(dx/2,rs,dx)[::-1]
             self.extent = (0,ratio*rs,0,rs)
 
+        x_mesh, y_mesh = np.meshgrid(self.xArray,self.yArray)
+        coordinate_mesh = np.array([x_mesh, y_mesh])
+        self.discreteCoords = np.swapaxes(np.swapaxes(coordinate_mesh,0,1),1,2) #an array of discretised position coords over entire map extent 
+
         
-        self.stateVec_asMatrix = np.zeros(shape=(len(self.yArray),len(self.xArray)))
-        self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
-        M = np.eye(len(self.stateVec_asVector))
-        self.M = M
-        self.M_sparse = csr_matrix(M)
+
+
+        if self.stateType == 'onehot': 
+            self.stateSize = len(self.xArray) * len(self.yArray)
+            self.stateVec_asMatrix = np.zeros(shape=self.discreteCoords.shape[:-1])
+            self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
+            M = np.eye(self.stateSize)
+            self.M = M
+            self.M_sparse = csr_matrix(M)
+            self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
+
+        
+        if self.stateType == 'placeFields':
+            xcentres = np.random.uniform(self.extent[0],self.extent[1],self.np)
+            ycentres = np.random.uniform(self.extent[2],self.extent[3],self.np)
+            self.centres = np.array([xcentres,ycentres]).T
+            self.stateSize = self.np
+            M = np.eye(self.stateSize)
+            self.M = M
+            self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
+
+
+
+
         
     def turn(self, turnAngle):
         theta_ = theta(self.dir)
@@ -398,8 +430,6 @@ class MazeAgent():
         wallPar = wallPar/np.linalg.norm(wallPar)
         dir_ = wallPar * np.dot(self.dir,wallPar)
         self.dir = dir_/np.linalg.norm(dir_)
-
-    def plot(self,i=-1):
         return
 
     def plotMazeStructure(self,doorsClosed=None):
@@ -423,15 +453,53 @@ class MazeAgent():
 
         return fig, ax
 
+    # def posToState(self,pos,stateType='onehot'): #redo this?
+    #     if stateType == 'onehot':
+    #         xid = np.argmin(np.abs(self.xArray - pos[0]))
+    #         yid = np.argmin(np.abs(self.yArray - pos[1]))
+    #         state = np.zeros_like(self.stateVec_asMatrix)
+    #         state[yid,xid] = 1
+    #         state = state.reshape(self.stateVec_asVector.shape)
+    #     return state
+
+    def getPlaceFields(self, M):
+        placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
+        threshold = 0.8*np.amax(placeFields,axis=(1,2))[:,None,None]
+        placeFields = np.maximum(0,placeFields - threshold)
+        return placeFields
     
-    def posToState(self,pos,stateType='onehot'): #redo this?
-        if stateType == 'onehot':
-            xid = np.argmin(np.abs(self.xArray - pos[0]))
-            yid = np.argmin(np.abs(self.yArray - pos[1]))
-            state = np.zeros_like(self.stateVec_asMatrix)
-            state[yid,xid] = 1
-            state = state.reshape(self.stateVec_asVector.shape)
-        return state
+
+
+    def posToState(self, pos, stateType='onehot'): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+        """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
+        retyrns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
+        Args:
+            pos ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """    
+        if stateType == 'onehot':     
+            x_s = pos[..., 0][...,None]
+            y_s = pos[..., 1][...,None]
+            x_s = np.tile(x_s, len(x_s.shape[:-1]) * (1,) + (len(self.xArray),))
+            y_s = np.tile(y_s, len(y_s.shape[:-1]) * (1,) + (len(self.yArray),))
+            x_s = x_s - self.xArray
+            y_s = y_s - self.yArray
+            x_s = np.argmin(np.abs(x_s),axis=-1)
+            y_s = np.argmin(np.abs(y_s),axis=-1)
+            onehotcoord = y_s * len(self.yArray) + x_s
+            states = (np.arange(self.stateSize) == onehotcoord[...,None]).astype(int)
+        
+        if stateType == 'placeFields':
+            centres = self.centres
+            pos = np.expand_dims(pos,-2)
+            dev = np.linalg.norm((centres - pos),axis=-1)
+            states = (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma1**2)) - (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma2**2))
+
+        return states
+        
+
 
 class Visualiser():
     def __init__(self, mazeAgent):
@@ -460,18 +528,15 @@ class Visualiser():
         ax.text(x=0, y=0, t="%.2f" %t)
 
     def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False):
-
         if time is not None: 
             times = []
             for j in range(len(self.mazeAgent.saveHist)):
                 times.append(self.mazeAgent.saveHist[j]['t'])
             hist_id = np.argmin(np.abs(np.array(times) - time))
-
         #if a figure/ax objects are passed, clear the axis and replot the maze
         if (ax is not None) and (fig is not None): 
             ax.clear()
             self.plotMazeStructure(fig=fig, ax=ax, hist_id=hist_id)
-
         # else if they are not passed plot the maze
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
