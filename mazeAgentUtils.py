@@ -46,7 +46,7 @@ class MazeAgent():
                 roomSize=1, 
                 alpha=0.05,
                 tau = 1,
-                nCells = 50):
+                nCells = 500):
 
         #arguments
         self.mazeType = mazeType 
@@ -72,12 +72,15 @@ class MazeAgent():
         self.snapshots = pd.DataFrame(columns = ['t','M','mazeState'])
 
         #place field stuff
-        self.sigma1 = 0.1
-        self.sigma2 = self.sigma1 * 1.5
+        self.sigma1 = 0.15
+        self.sigma2 = self.sigma1 * 2
         self.nCells = nCells
 
         #initialise maze
         self.initialiseMaze()
+
+        self.pcThreshold = 0.5
+        self.avdelta = []
 
     def runRat(self, trainTime=10, plotColor='C0',saveEvery=1):
         steps = int(trainTime * 60 / self.dt)
@@ -112,6 +115,7 @@ class MazeAgent():
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
 
+        print(np.mean(self.avdelta),np.std(self.avdelta))
 
     def TDLearningStep(self, pos, prevPos, dt, tau, alpha,  learnsparse=False):
 
@@ -123,19 +127,20 @@ class MazeAgent():
 
             s_t = np.argwhere(prevState)[0][0]
             s_tplus1 = np.argwhere(state)[0][0]
-            delta = prevState + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
+            delta = state + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
             self.M[:,s_t] = self.M[:,s_t] + alpha * delta
 
             if learnsparse == True:
                 state_s, prevState_s = csr_matrix(state), csr_matrix(prevState)
-                delta = prevState_s.T + (tau / dt)* (np.dot(self.M_sparse, ((1 - dt/tau) * state_s - prevState_s).T))
-                # delta = prevState_s.T + (np.dot(self.M_sparse, ((1 - dt/tau) * state_s - prevState_s).T))
-                self.M_sparse = self.M_sparse + alpha * np.dot(delta,prevState_s)
+                delta = state_s.T + (tau / dt)* (np.dot(self.M_sparse, ((1 - dt/tau) * state_s - prevState_s).T))
+                self.M_sparse = self.M_sparse + alpha * np.dot(delta,state_s)
         
         #normal TD learning 
         else:
-            delta = prevState + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            self.M = self.M + alpha * np.outer(delta, prevState)
+            delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+            self.M = self.M + alpha * np.outer(delta, state)
+        
+        self.avdelta.append(np.linalg.norm(delta))
 
     def movementPolicyUpdate(self):
 
@@ -328,7 +333,7 @@ class MazeAgent():
             # self.M = np.zeros(shape=(self.stateSize,self.stateSize))
             self.M_sparse = csr_matrix(self.M)
 
-        if self.stateType == 'placeFields':
+        if self.stateType == 'placeFields' or self.stateType == 'circles':
             self.stateSize = self.nCells
             xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
             ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
@@ -352,9 +357,6 @@ class MazeAgent():
             self.M = np.eye(self.stateSize) / self.stateSize
         
         self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
-
-
-
 
     def turn(self, turnAngle):
         theta_ = theta(self.dir)
@@ -450,8 +452,9 @@ class MazeAgent():
         self.dir = dir_/np.linalg.norm(dir_)
         return
 
-    def getPlaceFields(self, M, threshold_=0):
+    def getPlaceFields(self, M):
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
+        threshold_ = self.pcThreshold
         threshold = threshold_*np.amax(placeFields,axis=(1,2))[:,None,None]
         placeFields = np.maximum(0,placeFields - threshold)
         return placeFields
@@ -505,6 +508,15 @@ class MazeAgent():
             phase = np.matmul(pos,self.kVectors.T) * self.kFreq + self.phi
             fr = np.cos(phase)
             states = fr / len(fr)
+
+        if stateType == 'circles':
+            centres = self.centres
+            pos = np.expand_dims(pos,-2)
+            dev = np.linalg.norm((centres - pos),axis=-1)
+            states = dev
+            states = np.where(states > self.sigma1, 0, 1)
+            states = states / len(states)
+
 
         return states
         
@@ -628,7 +640,7 @@ class Visualiser():
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
         for (i, centre) in enumerate(self.mazeAgent.centres):
             ax.text(centre[0],centre[1],str(i),fontsize=3,horizontalalignment='center',verticalalignment='center')
-            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), self.mazeAgent.sigma1, self.mazeAgent.sigma1, alpha=0.5, facecolor= np.random.choice(['C0','C1','C2','C3','C4','C5']))
+            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigma1, 2*self.mazeAgent.sigma1, alpha=0.5, facecolor= np.random.choice(['C0','C1','C2','C3','C4','C5']))
             ax .add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
