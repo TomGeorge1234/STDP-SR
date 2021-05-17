@@ -33,22 +33,35 @@ rcParams['xtick.color']='grey'
 rcParams['ytick.color']='grey'
 rcParams['figure.titlesize']='medium'
 rcParams['axes.prop_cycle']=cycler('color', ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'])
+rcParams['image.cmap'] = 'inferno'
 
+defaultParams = { 
+          'mazeType'           : 'oneRoom',
+          'stateType'          : 'onehot',
+          'roomSize'           : 1,
+          'dt'                 : 0.01,
+          'dx'                 : 0.01,     
+          'tau'                : 2,
+          'TDdx'               : 0.02,
+          'nCells'             : None,
+          'velScale'           : 0.16,
+          'rotVelScale'        : None,
+          'initPos'            : None,  
+          'initDir'            : None,
+          'sigma'              : 0.3,
+          'placeCellThreshold' : 0.5, 
+          'gridCellThreshold' : 0,
+          'doorsClosed'        : True
 
+}
 class MazeAgent():
-
-    def __init__(self, 
-                mazeType='oneRoom', 
-                movementPolicy='raudies',
-                stateType='onehot', 
-                dt=0.1, 
-                dx=0.02,
-                roomSize=1, 
-                alpha=0.05,
-                tau = 1,
-                nCells = 500):
-
+    def __init__(self,
+                params)
         #arguments
+        self.setParams(defautParams)
+        self.setParmas(params)
+        self.initialise()
+
         self.mazeType = mazeType 
         self.roomSize = roomSize #scale the maze, in metres
         self.dt = dt
@@ -58,52 +71,107 @@ class MazeAgent():
         self.tau = tau 
         self.alpha = alpha
         self.velocityScale = 0.16
-        self.rotationalVelocityScale = np.pi
+        self.rotationalVelocityScale = 1*np.pi
 
         #initialise state. the agent has a position, a direction and a velocity at all times 
-        self.pos = np.array([0.2,0.2])
-        self.dir = np.array([1,1]) / np.sqrt(2) #north east 
         self.vel = self.velocityScale
         self.t = 0
         self.runID = 0
+
+
+
+        #initialise maze
+        self.initialiseMaze()
+
+        self.pcThreshold = 0
+        self.avdelta = []
+
+    def updateParams(self, params):
+        self.mazeType = params.get('mazeType',self.mazeType)
+        self.stateType = params.get('stateType',self.stateType)
+        self.roomSize = params.get('roomSize',self.roomSize)
+        self.dt = params.get('dt',self.dt)
+        self.dx = params.get('dx',self.dx)
+        self.tau = params.get('tau',self.tau)
+        self.TDdx = params.get('TDdx',self.TDdx)
+        self.nCells = params.get('nCells',self.nCells)
+        self.velScale = params.get('velocityScale',self.velScale)
+        self.rotVelScale = params.get('rotVelocity',self.rotVelScale)
+        self.placeCellThreshold = params.get('placeCellThreshold',self.placeCellThreshold)
+        self.gridCellThreshold = params.get('gridCellThreshold',self.gridCellThreshold)
+        self.sigma = params.get('sigma',self.sigma)
+        self.initPos = params.get('initPos',self.initPos)
+        self.initDir = params.get('vel',self.vel)
+        self.doorsClosed = params.get('doorsClosed',self.doorsClosed)
+
+
+    def initialiseRat(self, paramDict): #should only be called once at the start 
+        #set pos/vel
+        self.pos = self.initPos
+        self.vel = self.velScale
+        self.dir = self.initDir
+
+        #make maze 
+        self.walls = getWalls(mazeType=self.mazeType, roomSize=self.roomSize)
+
+        if self.initPos is None: 
+            ex = self.extent
+            self.initPos = np.array([ex[0] + 0.2*(ex[1]-ex[0]),
+                                     ex[2] + 0.2*(ex[3]-ex[2])])
+        if self.rotVelScale is None: 
+            if self.mazeType == 'loop' or self.mazeTpye == 'longCorridor':
+                self.rotVelScale = np.pi
+            else: 
+                self.rotVelScale = 
+        #set cells
+
+        #get discreteCoordintates and states 
 
         #initialise history dataframes
         self.history = pd.DataFrame(columns = ['t','pos','color','runID']) 
         self.snapshots = pd.DataFrame(columns = ['t','M','mazeState'])
 
-        #place field stuff
-        self.sigma1 = 0.15
-        self.sigma2 = self.sigma1 * 2
-        self.nCells = nCells
 
-        #initialise maze
-        self.initialiseMaze()
 
-        self.pcThreshold = 0.5
-        self.avdelta = []
 
-    def runRat(self, trainTime=10, plotColor='C0',saveEvery=1):
+
+
+    def runRat(self, trainTime=10, plotColor='C0',saveEvery=1, decayalpha=False):
         steps = int(trainTime * 60 / self.dt)
         hist_t, hist_pos, hist_color, hist_runID = [0]*steps, [0]*steps, [plotColor]*steps, [self.runID]*steps
+        lastTDstep, n_TD, distanceToTD = 0, 0, np.random.exponential(0.02) #2cm scale
+        hist_pos[0], hist_t[0] = self.pos, self.t
 
         saveSnapshots=False
         if saveEvery is not None:
             saveSnapshots, saveFreq = True, int(saveEvery * 60 / self.dt)
 
-        for i in tqdm(range(steps)): #main training loop 
+        for i in tqdm(range(1,steps)): #main training loop 
 
             if (saveSnapshots is True) and (i % saveFreq == 0):
                 snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
                 self.snapshots = self.snapshots.append(snapshot)
 
+
+            self.movementPolicyUpdate()
+            self.t += self.dt
             hist_pos[i], hist_t[i] = self.pos, self.t
 
-            prevPos = self.pos
-            self.movementPolicyUpdate()
-        
-            self.TDLearningStep(pos=self.pos, prevPos=prevPos, dt=self.dt, tau=self.tau, alpha=self.alpha)
-            
-            self.t += self.dt
+            alpha_ = self.alpha
+            if decayalpha == True: 
+                alpha_ *= np.exp(-(self.t/60)/(0.5*trainTime))
+
+            #maybe do TD step
+            if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
+                dt_TD = self.t - hist_t[lastTDstep]
+                self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dt_TD, tau=self.tau, alpha=alpha_)
+                lastTDstep = i
+                n_TD += 1
+                distanceToTD = np.random.exponential(0.02)
+                hist_color[i] = 'C1'
+            else:
+                # print("notd")
+                pass
 
         self.runID += 1
 
@@ -115,7 +183,8 @@ class MazeAgent():
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
 
-        print(np.mean(self.avdelta),np.std(self.avdelta))
+        print(n_TD)
+
 
     def TDLearningStep(self, pos, prevPos, dt, tau, alpha,  learnsparse=False):
 
@@ -137,8 +206,11 @@ class MazeAgent():
         
         #normal TD learning 
         else:
-            delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            self.M = self.M + alpha * np.outer(delta, state)
+            # delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+            # self.M = self.M + alpha * np.outer(delta, state)
+
+            delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
+            self.M = self.M + alpha * np.outer(delta, prevState)
         
         self.avdelta.append(np.linalg.norm(delta))
 
@@ -178,6 +250,9 @@ class MazeAgent():
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.wallBounce(wall)
+        
+        if self.mazeType == 'loop':
+            self.pos[0] = self.pos[0] % self.roomSize
 
     def initialiseMaze(self):
 
@@ -315,13 +390,26 @@ class MazeAgent():
             self.xArray = np.arange(dx/2,ratio*rs,dx)
             self.yArray = np.arange(dx/2,rs,dx)[::-1]
             self.extent = (0,ratio*rs,0,rs)
-
+        
+        if self.mazeType == 'loop': 
+            height = 0.05
+            self.walls['room'] = np.array([
+                                    [[0,0],[rs,0]],
+                                    [[0,height*rs],[rs,height*rs]]])
+            self.walls['doors'] = np.array([
+                                    [[0,0],[0,height*rs]],
+                                    [[rs,0],[rs,height*rs]]])
+            self.pos = np.array([0.05,0.05])
+            self.dir = np.array([1,0])
+            self.xArray = np.arange(dx/2,rs,dx)
+            self.yArray = np.arange(dx/2,height*rs,dx)[::-1]
+            self.extent = (0,rs,0,height*rs)
+        
         x_mesh, y_mesh = np.meshgrid(self.xArray,self.yArray)
         coordinate_mesh = np.array([x_mesh, y_mesh])
         self.discreteCoords = np.swapaxes(np.swapaxes(coordinate_mesh,0,1),1,2) #an array of discretised position coords over entire map extent 
 
         self.mazeState['walls'] = self.walls
-        self.toggleDoors(doorState = self.doorState)
         self.mazeState['extent'] = self.extent
 
 
@@ -338,13 +426,15 @@ class MazeAgent():
             xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
             ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
             self.centres = np.array([xcentres,ycentres]).T
-            self.centres[-1] = np.array([0.5,0.5]) #add in a known centre
-            self.centres[-2] = np.array([0.95,0.5]) #add in a known centre
-            self.centres[-3] = np.array([0.05,0.5]) #add in a known centre
-            self.centres[-4] = np.array([0.95,0.95]) #add in a known centre
-            self.centres[-5] = np.array([0.05,0.05]) #add in a known centre
-            self.centres[-6] = np.array([0.5,0.95]) #add in a known centre
-            # self.M = np.random.randn(self.stateSize,self.stateSize)
+            # self.centres[-1] = np.array([0.5*self.extent[1],0.5*self.extent[3]]) #add in a known centre
+            # self.centres[-2] = np.array([0.95*self.extent[1],0.5*self.extent[3]]) #add in a known centre
+            # self.centres[-3] = np.array([0.05*self.extent[1],0.5*self.extent[3]]) #add in a known centre
+            # self.centres[-4] = np.array([0.95*self.extent[1],0.95*self.extent[3]]) #add in a known centre
+            # self.centres[-5] = np.array([0.05*self.extent[1],0.05*self.extent[3]]) #add in a known centre
+            # self.centres[-6] = np.array([0.5*self.extent[1],0.95*self.extent[3]]) #add in a known centre
+            inds = self.centres[:,0].argsort()
+            self.centres = self.centres[inds]
+            # self.M = np.random.randn(self.stateSize,self.stateSize) / self.stateSize**2
             # self.M = np.zeros(shape=(self.stateSize,self.stateSize))
             self.M = np.eye(self.stateSize) / self.stateSize
   
@@ -356,7 +446,8 @@ class MazeAgent():
             self.phi = np.random.uniform(0,2*np.pi,size=(self.nCells))
             self.M = np.eye(self.stateSize) / self.stateSize
         
-        self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
+        self.toggleDoors(doorState = self.doorState)
+        # self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
 
     def turn(self, turnAngle):
         theta_ = theta(self.dir)
@@ -372,12 +463,18 @@ class MazeAgent():
             if currentDoorState == 'open': self.doorState = 'closed'
             elif currentDoorState == 'closed': self.doorState = 'open'
         
+        walls = self.walls.copy()
         if self.doorState == 'open': 
-            self.mazeState['walls'] = self.walls.pop('doors')
+            del walls['doors']
+            self.mazeState['walls'] = walls
         elif self.doorState == 'closed': 
-            self.mazeState['walls'] = self.walls
+            self.mazeState['walls'] = walls
+
+        self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
 
         return self.mazeState['walls']
+
+
 
     def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
         s1, s2 = np.array(proposedStep[0]), np.array(proposedStep[1])
@@ -414,7 +511,7 @@ class MazeAgent():
                     continue
 
                 if (lam_s > 1) and (0 <= lam_w <= 1):
-                    if lam_s * stepLength <= 0.05: #if the future collision is under 5cm away
+                    if lam_s * stepLength <= 0.05: #if the future collision is under 3cm away
                         futureCollisionList[0].append(wall)
                         futureCollisionList[1].append([lam_s,lam_w])
                         continue
@@ -473,7 +570,7 @@ class MazeAgent():
         gridFields = np.maximum(0,gridFields)
         return gridFields
     
-    def posToState(self, pos, stateType='onehot'): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+    def posToState(self, pos, stateType=None): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
         retyrns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
@@ -481,7 +578,9 @@ class MazeAgent():
 
         Returns:
             [type]: [description]
-        """    
+        """ 
+        if stateType == None: stateType = self.stateType
+
         if stateType == 'onehot':     
             x_s = pos[..., 0][...,None]
             y_s = pos[..., 1][...,None]
@@ -497,17 +596,26 @@ class MazeAgent():
         if stateType == 'placeFields':
             centres = self.centres
             pos = np.expand_dims(pos,-2)
-            dev = np.linalg.norm((centres - pos),axis=-1)
-            states = (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma1**2)) #- (1/self.sigma2)*np.exp(-dev**2 / (2*self.sigma2**2))
-            states = states / len(states)
-        
+            diff = np.abs((centres - pos))
+            if (self.mazeType == 'loop') and (self.doorState == 'open'):
+                diff_aroundloop = diff.copy()
+                diff_aroundloop[..., 0] = (self.extent[1]-self.extent[0]) - diff_aroundloop[..., 0]
+                dev = np.linalg.norm(diff,axis=-1)
+                dev_aroundloop = np.linalg.norm(diff_aroundloop,axis=-1)
+                states = (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma1**2)) - (1/self.sigma2)*np.exp(-dev**2 / (2*self.sigma2**2))
+                states_aroundloop = (1/self.sigma1)*np.exp(-dev_aroundloop**2 / (2*self.sigma1**2)) - (1/self.sigma2)*np.exp(-dev_aroundloop**2 / (2*self.sigma2**2))
+                states = states + states_aroundloop
+            else:
+                dev = np.linalg.norm(diff,axis=-1)
+                states = (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma1**2)) - (1/self.sigma2)*np.exp(-dev**2 / (2*self.sigma2**2))
+            states = states/states.shape[-1]
         if stateType == 'bvc':
             pass
         
         if stateType == 'fourier':
             phase = np.matmul(pos,self.kVectors.T) * self.kFreq + self.phi
             fr = np.cos(phase)
-            states = fr / len(fr)
+            states = fr 
 
         if stateType == 'circles':
             centres = self.centres
@@ -515,12 +623,13 @@ class MazeAgent():
             dev = np.linalg.norm((centres - pos),axis=-1)
             states = dev
             states = np.where(states > self.sigma1, 0, 1)
-            states = states / len(states)
+            # states = states / len(states)
+
 
 
         return states
         
-
+def getWalls(mazeType, roomSize, **kwargs)
 
 class Visualiser():
     def __init__(self, mazeAgent):
@@ -544,11 +653,12 @@ class Visualiser():
         ax.axis('off')
         return fig, ax
     
-    def plotTrajectory(self,hist_id=-1,endtime=120):
+    def plotTrajectory(self,hist_id=-1,endtime=2):
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
-        endid = self.history['t'].sub(endtime).abs().to_numpy().argmin()
+        endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
         trajectory = np.stack(self.history['pos'][:endid])
-        ax.scatter(trajectory[:,0],trajectory[:,1],s=0.1,alpha=0.5)
+        color = np.stack(self.history['color'][:endid])
+        ax.scatter(trajectory[:,0],trajectory[:,1],s=0.2,alpha=0.7,c=color)
         saveFigure(fig, "trajectory")
         return fig, ax
 
@@ -556,7 +666,7 @@ class Visualiser():
     def plotM(self,hist_id=-1):
         fig, ax = plt.subplots(figsize=(2,2))
         M = self.snapshots.iloc[hist_id]['M']
-        im = ax.imshow(M,cmap='viridis')
+        im = ax.imshow(M)
         fig.colorbar(im, ax=ax)
         ax.set_aspect('equal')
         ax.grid(False)
@@ -587,7 +697,7 @@ class Visualiser():
         t = snapshot['t'] / 60
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M)
-        ax.imshow(placeFields[number],extent=extent,cmap='viridis',interpolation=None)
+        ax.imshow(placeFields[number],extent=extent,interpolation=None)
         if plotTimeStamp == True: 
             ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
         if show==False:
@@ -601,7 +711,7 @@ class Visualiser():
         if number == None: number = random.randint(a=0,b=self.mazeAgent.stateSize-1)
         extent = self.mazeAgent.extent
         rf = self.mazeAgent.discreteStates[..., number]
-        ax.imshow(rf,extent=extent,cmap='viridis',interpolation=None)
+        ax.imshow(rf,extent=extent,interpolation=None)
         if show==False:
             plt.close(fig)
         saveFigure(fig, "receptiveField")
@@ -610,29 +720,49 @@ class Visualiser():
 
     def plotGridField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False, plotTimeStamp=False):
         if time is not None: 
-            hist_id = self.snapshots['t'].sub(time).abs().to_numpy().argmin()
-        #if a figure/ax objects are passed, clear the axis and replot the maze
-        if (ax is not None) and (fig is not None): 
-            ax.clear()
-            self.plotMazeStructure(fig=fig, ax=ax, hist_id=hist_id)
-        # else if they are not passed plot the maze
-        if (fig, ax) == (None, None):
-            fig, ax = self.plotMazeStructure(hist_id=hist_id)
-        
-        if number == None: number = random.randint(a=0,b=self.mazeAgent.stateSize-1)
+            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
 
         snapshot = self.snapshots.iloc[hist_id]
         M = snapshot['M']
         t = snapshot['t'] / 60
         extent = snapshot['mazeState']['extent']
-        gridFields = self.mazeAgent.getGridFields(M=M,alignToFinal=True)
+        if hist_id == -1 and animationCall == False:
+            gridFields = self.mazeAgent.gridFields
+        else:
+            gridFields = self.mazeAgent.getGridFields(M=M,alignToFinal=True)
 
-        ax.imshow(gridFields[number],extent=extent,cmap='viridis',interpolation=None)
+        if number == 'many': 
+            fig = plt.figure(figsize=(10, 10*((extent[3]-extent[2])/(extent[1]-extent[0]))))
+            gs = matplotlib.gridspec.GridSpec(6, 6, hspace=0.1, wspace=0.1)
+            c=0
+            numberstoplot = np.concatenate((np.array([0,1,2,3,4,5]),np.geomspace(6,gridFields.shape[0]-1,30).astype(int)))
+            for i in range(6):
+                for j in range(6):
+                    ax = plt.subplot(gs[i,j])
+                    ax.imshow(gridFields[numberstoplot[c]],extent=extent,interpolation=None)
+                    ax.grid(False)
+                    ax.axis('off')
+                    ax.text(extent[1]-0.07, extent[3]-0.05,str(numberstoplot[c]+1),fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
+                    c+=1
 
-        if plotTimeStamp == True: 
-            ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
-        if show==False:
-            plt.close(fig)
+        else:
+            #if a figure/ax objects are passed, clear the axis and replot the maze
+            if (ax is not None) and (fig is not None): 
+                ax.clear()
+                self.plotMazeStructure(fig=fig, ax=ax, hist_id=hist_id)
+            # else if they are not passed plot the maze
+            if (fig, ax) == (None, None):
+                fig, ax = self.plotMazeStructure(hist_id=hist_id)
+            
+            if number == None: number = random.randint(a=0,b=self.mazeAgent.stateSize-1)
+
+            ax.imshow(gridFields[number],extent=extent,interpolation=None)
+
+            if plotTimeStamp == True: 
+                ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
+            if show==False:
+                plt.close(fig)
+        
         saveFigure(fig, "gridField")
         return fig, ax
         
@@ -644,14 +774,27 @@ class Visualiser():
             ax .add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
+    
+    def plotHeatMap(self):
+        posdata = np.stack(self.mazeAgent.history['pos'])
+        bins = list(self.mazeAgent.discreteCoords.shape[:2])
+        bins.reverse()
+        print(bins)
+        hist = np.histogram2d(posdata[:,0],posdata[:,1],bins=bins)[0]
+        print(hist.T.shape)
+        print(self.mazeAgent.extent)
+        fig, ax = self.plotMazeStructure(hist_id=-1)
+        ax.imshow(hist.T, extent=self.mazeAgent.extent)
+        return fig, ax
 
-    def animateField(self, number=0,field='place'):
+
+    def animateField(self, number=0,field='place',interval=100):
         if field == 'place':
             fig, ax = self.plotPlaceField(hist_id=0,number=number,show=False)
-            anim = FuncAnimation(fig, self.plotPlaceField, fargs=(None, fig, ax, number, False, True, True), frames=len(self.snapshots), repeat=False)
+            anim = FuncAnimation(fig, self.plotPlaceField, fargs=(None, fig, ax, number, False, True, True), frames=len(self.snapshots), repeat=False, interval=interval)
         elif field == 'grid':
             fig, ax = self.plotGridField(hist_id=0,number=number,show=False)
-            anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True), frames=len(self.snapshots), repeat=False)
+            anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True), frames=len(self.snapshots), repeat=False, interval=interval)
         today = datetime.strftime(datetime.now(),'%y%m%d')
         now = datetime.strftime(datetime.now(),'%H%M')
         anim.save("./figures/animations/anim"+field+today+now+".mp4")
@@ -659,6 +802,8 @@ class Visualiser():
         return anim
 
 
+
+wall_oneRoom = 
 def perp(a=None):
     b = np.empty_like(a)
     b[0] = -a[1]
