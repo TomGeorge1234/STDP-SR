@@ -8,6 +8,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib import rcParams
 from datetime import datetime 
 import time 
+import numbers
 import os
 from cycler import cycler
 from scipy.sparse import csr_matrix
@@ -35,170 +36,246 @@ rcParams['figure.titlesize']='medium'
 rcParams['axes.prop_cycle']=cycler('color', ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'])
 rcParams['image.cmap'] = 'inferno'
 
+#Default parameters for MazeAgent 
 defaultParams = { 
-          'mazeType'           : 'oneRoom',
-          'stateType'          : 'onehot',
-          'roomSize'           : 1,
-          'dt'                 : 0.01,
-          'dx'                 : 0.01,     
-          'tau'                : 2,
-          'TDdx'               : 0.02,
-          'nCells'             : None,
-          'velScale'           : 0.16,
-          'rotVelScale'        : None,
-          'initPos'            : None,  
-          'initDir'            : None,
-          'sigma'              : 0.3,
-          'placeCellThreshold' : 0.5, 
-          'gridCellThreshold' : 0,
-          'doorsClosed'        : True
-
+          'mazeType'           : 'oneRoom',  #type of maze, define in getMaze() function
+          'stateType'          : 'gaussian', #feature on which to TD learn (onehot, gaussian, gaussianCS, fourier, circles)
+          'movementPolicy'     : 'raudies',  #movement policy (raudies, random walk, windows screensaver)
+          'roomSize'           : 1,          #maze size scaling parameter, metres
+          'dt'                 : 0.01,       #simulation time disretisation 
+          'dx'                 : 0.01,       #space discretisation (for plotting, movement is continuous)
+          'tau'                : 2,          #TD decay time, seconds
+          'TDdx'               : 0.02,       #rough distance between TD learning updates, metres 
+          'alpha'              : 0.01,       #TD learning rate 
+          'nCells'             : None,       #how many features to use
+          'speedScale'           : 0.16,     #movement speed scale, metres/second
+          'rotSpeedScale'        : None,     #rotational speed scale, radians/second
+          'initPos'            : None,       #initial position [x0, y0], metres
+          'initDir'            : None,       #initial direction, unit vector
+          'sigma'              : 0.3,        #feature cell width scale, relevant for  gaussin, gaussianCS, circles
+          'placeCellThreshold' : 0.5,        #place cell threshold value (fraction of its maximum)
+          'gridCellThreshold'  : 0,          #grid cell threshold value (fraction of its maximum)
+          'doorsClosed'        : True        #whether doors are opened or closed in multicompartment maze
 }
+
 class MazeAgent():
-    def __init__(self,
-                params)
-        #arguments
-        self.setParams(defautParams)
-        self.setParmas(params)
+    """MazeAgent defines an agent moving around a maze. 
+    The agent moves according to a predefined movement policy
+    As the agent moves it learns a successor representation over state vectors according to a TD learning rule 
+    The movement polcy is 
+        (i)  continuous in space. There is no discretisation of location. Time is discretised into steps of dt
+        (ii) completely decoupled from the TD learning.
+    TD learning is 
+        (i)  state general. i.e. it learns generic SRs for feature vectors which are not necessarily onehot. See de Cothi and Barry, 2020  
+        (ii) time continuous. Defined in terms of a memory decay time tau, not unitless gamma. Any two staes can be used fro a TD learning step irrespective of their seperation in time. 
+    As the rat moves and learns its position and time stamps are continually saved. Periodically a snapshot of the current SR matrix and state of other parameters in the maze are also saved. 
+    """   
+    def __init__(self,params={}):
+        """Sets the parameters of the maze anad agent (using default if not provided) 
+        and initialises everything. This includes: 
+        •initilising history dataframes
+        •making the maze (a dictionary of "walls" which cant be crossed)
+        •setting position, velocity, time
+        •discretising space into coordinates for later plotting
+        •initialising basis features (gaussian centres, fourier frequencies etc.)
+        •initialising SR matrix 
+
+        Args:
+            params (dict, optional): A dictionary of parameters which you want to differ from the default. Defaults to {}.
+        """        
+        print("Setting parameters")
+        for key, value in defaultParams.items():
+            setattr(self, key, value)
+        self.updateParams(params)
+
+        print("Initialising")
         self.initialise()
 
-        self.mazeType = mazeType 
-        self.roomSize = roomSize #scale the maze, in metres
-        self.dt = dt
-        self.dx = dx
-        self.movementPolicy = movementPolicy
-        self.stateType = stateType
-        self.tau = tau 
-        self.alpha = alpha
-        self.velocityScale = 0.16
-        self.rotationalVelocityScale = 1*np.pi
+    def updateParams(self, params : dict):        
+        """Updates parameters from a dictionary. 
+        All parameters found in params will be updated to new value
 
-        #initialise state. the agent has a position, a direction and a velocity at all times 
-        self.vel = self.velocityScale
-        self.t = 0
-        self.runID = 0
+        Args:
+            params (dict): dictionary of parameters to change
+            initialise (bool, optional): [description]. Defaults to False.
+        """        
+        for key, value in params.items():
+            setattr(self, key, value)
 
-
-
-        #initialise maze
-        self.initialiseMaze()
-
-        self.pcThreshold = 0
-        self.avdelta = []
-
-    def updateParams(self, params):
-        self.mazeType = params.get('mazeType',self.mazeType)
-        self.stateType = params.get('stateType',self.stateType)
-        self.roomSize = params.get('roomSize',self.roomSize)
-        self.dt = params.get('dt',self.dt)
-        self.dx = params.get('dx',self.dx)
-        self.tau = params.get('tau',self.tau)
-        self.TDdx = params.get('TDdx',self.TDdx)
-        self.nCells = params.get('nCells',self.nCells)
-        self.velScale = params.get('velocityScale',self.velScale)
-        self.rotVelScale = params.get('rotVelocity',self.rotVelScale)
-        self.placeCellThreshold = params.get('placeCellThreshold',self.placeCellThreshold)
-        self.gridCellThreshold = params.get('gridCellThreshold',self.gridCellThreshold)
-        self.sigma = params.get('sigma',self.sigma)
-        self.initPos = params.get('initPos',self.initPos)
-        self.initDir = params.get('vel',self.vel)
-        self.doorsClosed = params.get('doorsClosed',self.doorsClosed)
-
-
-    def initialiseRat(self, paramDict): #should only be called once at the start 
-        #set pos/vel
-        self.pos = self.initPos
-        self.vel = self.velScale
-        self.dir = self.initDir
-
-        #make maze 
-        self.walls = getWalls(mazeType=self.mazeType, roomSize=self.roomSize)
-
-        if self.initPos is None: 
-            ex = self.extent
-            self.initPos = np.array([ex[0] + 0.2*(ex[1]-ex[0]),
-                                     ex[2] + 0.2*(ex[3]-ex[2])])
-        if self.rotVelScale is None: 
-            if self.mazeType == 'loop' or self.mazeTpye == 'longCorridor':
-                self.rotVelScale = np.pi
-            else: 
-                self.rotVelScale = 
-        #set cells
-
-        #get discreteCoordintates and states 
-
+    def initialise(self): #should only be called once at the start 
+        """Initialises the maze and agent. Should only be called once at the start.
+        """        
         #initialise history dataframes
+        print("   making state/history dataframes")
+        self.mazeState = {}
         self.history = pd.DataFrame(columns = ['t','pos','color','runID']) 
         self.snapshots = pd.DataFrame(columns = ['t','M','mazeState'])
 
+        #set pos/vel
+        print("   initialising velocity, position and direction")
+        self.pos = self.initPos
+        self.speed = self.speedScale
+        self.dir = self.initDir
 
+        #time and runID
+        print("   setting time/run counters")
+        self.t = 0
+        self.runID = 0
 
+        #make maze 
+        print("   making the maze walls")
+        self.walls = getWalls(mazeType=self.mazeType, roomSize=self.roomSize)
+        self.mazeState['walls'] = self.walls
 
+        #extent, xArray, yArray, discreteCoords
+        print("   discretising position for later plotting")
+        minx, maxx, miny, maxy = 0, 0, 0, 0
+        for room in self.walls:
+            wa = self.walls[room]
+            minx, maxx, miny, maxy = min(minx,np.min(wa[...,0])), max(maxx,np.max(wa[...,0])), min(miny,np.min(wa[...,1])), max(maxy,np.max(wa[...,1])) 
+        self.extent = np.array([minx,maxx,miny,maxy])
+        self.width = maxx-minx
+        self.height = maxy-miny
+        self.xArray = np.arange(minx + self.dx/2, maxx, self.dx)
+        self.yArray = np.arange(miny + self.dx/2, maxy, self.dx)[::-1]
+        x_mesh, y_mesh = np.meshgrid(self.xArray,self.yArray)
+        coordinate_mesh = np.array([x_mesh, y_mesh])
+        self.discreteCoords = np.swapaxes(np.swapaxes(coordinate_mesh,0,1),1,2) #an array of discretised position coords over entire map extent 
+        self.mazeState['extent'] = self.extent
 
+        #handle None params
+        print("   handling undefined parameters")
+        if self.pos is None: 
+            ex = self.extent
+            self.pos = np.array([ex[0] + 0.2*(ex[1]-ex[0]),ex[2] + 0.2*(ex[3]-ex[2])])
+        if self.dir is None: 
+            if self.mazeType == 'longCorridor': self.dir = np.array([0.0001,1])
+            elif self.mazeType == 'loop': self.dir = np.array([1,0.0001])
+            else: self.dir = np.array([1,1]) / np.sqrt(2)
+        if self.rotSpeedScale is None: 
+            if self.mazeType == 'loop' or self.mazeType == 'longCorridor':
+                self.rotSpeedScale = np.pi
+            else: 
+                self.rotSpeedScale = 3*np.pi
+        if self.nCells is None: 
+            ex = self.extent
+            area, pcarea  = (ex[1]-ex[0])*(ex[3]-ex[2]), np.pi * ((self.sigma/2)**2)
+            self.nCells = int(10 * area / pcarea) #~10 in any given place
+            
+        #initialise basis cells and M (successor matrix)
+        print("   initialising basis features for learning")
+        if self.stateType == 'onehot': 
+            self.stateSize = len(self.xArray) * len(self.yArray)
+            self.stateVec_asMatrix = np.zeros(shape=self.discreteCoords.shape[:-1])
+            self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
+            self.M = np.eye(self.stateSize) / self.stateSize
+            self.M_sparse = csr_matrix(self.M)
+        elif self.stateType in ['gaussian', 'gaussianCS', 'circles']:
+            self.stateSize = self.nCells
+            xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
+            ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
+            self.centres = np.array([xcentres,ycentres]).T
+            inds = self.centres[:,0].argsort()
+            self.centres = self.centres[inds]
+            self.M = np.eye(self.stateSize) / self.stateSize
+        elif self.stateType == 'fourier':
+            self.stateSize = self.nCells
+            self.kVectors = np.random.rand(self.nCells,2) - 0.5
+            self.kVectors /= np.linalg.norm(self.kVectors, axis=1)[:,None]
+            self.kFreq = 2*np.pi / np.random.uniform(0.01,1,size=(self.nCells))
+            self.phi = np.random.uniform(0,2*np.pi,size=(self.nCells))
+            self.M = np.eye(self.stateSize) / self.stateSize
 
-    def runRat(self, trainTime=10, plotColor='C0',saveEvery=1, decayalpha=False):
-        steps = int(trainTime * 60 / self.dt)
-        hist_t, hist_pos, hist_color, hist_runID = [0]*steps, [0]*steps, [plotColor]*steps, [self.runID]*steps
-        lastTDstep, n_TD, distanceToTD = 0, 0, np.random.exponential(0.02) #2cm scale
+        #array of states, one for each discretised position coordinate 
+        print("   calculating state vector at all discretised positions")
+        self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
+
+    def runRat(self, trainTime=10, plotColor=None,saveEvery=1):
+        """The main experiment call.
+        A "run" consists of a period where the agent explores the maze according to the movement policy. 
+        As it explores it learns, by TD, a successor representation over state vectors. 
+        The can be called multiple times. Each successive run will be saved in self.history with an increasing runID
+        Snapshots of the current SR matrix and mazeState can be saved along the way
+        Runs can be interrupted with KeyboardInterrupt, data will still be saved. 
+        Args:
+            trainTime (int, optional): How long to explore. Defaults to 10.
+            plotColor (str, optional): When plotting trajectory, what color to plot it. Defaults to 'C0'.
+            saveEvery (int, optional): Frequency to save snapshots, in minutes. Defaults to 1.
+        """        
+
+        steps = int(trainTime * 60 / self.dt) #number of steps to perform 
+       
+        hist_t, hist_pos, hist_color, hist_runID = [0]*steps, [0]*steps, [(plotColor or 'C'+str(runID)]*steps, [self.runID]*steps
+        lastTDstep, n_TD, distanceToTD = 0, 0, np.random.exponential(self.TDdx) #2cm scale
         hist_pos[0], hist_t[0] = self.pos, self.t
+        self._toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
 
-        saveSnapshots=False
-        if saveEvery is not None:
-            saveSnapshots, saveFreq = True, int(saveEvery * 60 / self.dt)
-
+        """Main training loop. Principally on each iteration: 
+            • always updates motion policy
+            • often does TD learning step
+            • sometimes saves snapshot
+        """
         for i in tqdm(range(1,steps)): #main training loop 
+            try:
+                #save snapshot 
+                if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
+                    snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
+                    self.snapshots = self.snapshots.append(snapshot)
 
-            if (saveSnapshots is True) and (i % saveFreq == 0):
-                snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
-                self.snapshots = self.snapshots.append(snapshot)
+                #update pos, velocity, direction and time according to movement policy
+                self.movementPolicyUpdate()
+                hist_pos[i], hist_t[i] = self.pos, self.t
 
+                try: alpha_ = alpha[0] * np.exp(-(i/steps)*(np.log(self.alpha[0]/self.alpha[1])))
+                except: alpha_ = self.alpha
 
-            self.movementPolicyUpdate()
-            self.t += self.dt
-            hist_pos[i], hist_t[i] = self.pos, self.t
-
-            alpha_ = self.alpha
-            if decayalpha == True: 
-                alpha_ *= np.exp(-(self.t/60)/(0.5*trainTime))
-
-            #maybe do TD step
-            if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
-                dt_TD = self.t - hist_t[lastTDstep]
-                self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dt_TD, tau=self.tau, alpha=alpha_)
-                lastTDstep = i
-                n_TD += 1
-                distanceToTD = np.random.exponential(0.02)
-                hist_color[i] = 'C1'
-            else:
-                # print("notd")
-                pass
+                #maybe do TD step
+                if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
+                    dt_TD = self.t - hist_t[lastTDstep]
+                    self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dt_TD, tau=self.tau, alpha=alpha_)
+                    lastTDstep = i
+                    n_TD += 1
+                    distanceToTD = np.random.exponential(self.TDdx)
+                    hist_color[i] = 'r'
+            
+            except KeyboardInterrupt:
+                break
 
         self.runID += 1
 
-        runHistory = pd.DataFrame({'t':hist_t, 'pos':hist_pos, 'color':hist_color, 'runID':hist_runID})
+        runHistory = pd.DataFrame({'t':hist_t[:i], 'pos':hist_pos[:i], 'color':hist_color[:i], 'runID':hist_runID[:i]})
         self.history = self.history.append(runHistory)
         snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
+        #find and save grid/place cells so you don't have to repeatedly calculate them when plotting 
+        print("Calculating place and grid cells")
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
 
-        print(n_TD)
-
-
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha,  learnsparse=False):
-
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, learnsparse=False):
+        """TD learning step
+            Improves estimate of SR matrix, M, by a TD learning step. 
+            By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
+            If stateType is onehot, additional efficiencies can be gained by using onehot specific learning rule (see Stachenfeld et al. 2017)
+            Does time continuous TD learning (see Doya, 2000)
+        Args:
+            pos: position at t+dt (t)
+            prevPos (array): position at t (t-dt)
+            dt (float): time difference between two positions
+            tau (float or int): memory decay time (analogous to gamma in TD, gamma = 1 - dt/tau)
+            alpha (float): learning rate
+            learnsparse (bool): Whether to use scipy sparse matrix methods to increase SR learning speed for onehots
+        """
         state = self.posToState(pos,stateType=self.stateType)
         prevState = self.posToState(prevPos,stateType=self.stateType)
 
         #onehot optimised TD learning 
         if (self.stateType == 'onehot'): 
-
             s_t = np.argwhere(prevState)[0][0]
             s_tplus1 = np.argwhere(state)[0][0]
             delta = state + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
             self.M[:,s_t] = self.M[:,s_t] + alpha * delta
-
             if learnsparse == True:
                 state_s, prevState_s = csr_matrix(state), csr_matrix(prevState)
                 delta = state_s.T + (tau / dt)* (np.dot(self.M_sparse, ((1 - dt/tau) * state_s - prevState_s).T))
@@ -206,277 +283,97 @@ class MazeAgent():
         
         #normal TD learning 
         else:
-            # delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            # self.M = self.M + alpha * np.outer(delta, state)
-
-            delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
-            self.M = self.M + alpha * np.outer(delta, prevState)
+            delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+            self.M = self.M + alpha * np.outer(delta, state)
+            # equivalent to
+            # delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
+            # self.M = self.M + alpha * np.outer(delta, prevState)
         
-        self.avdelta.append(np.linalg.norm(delta))
-
     def movementPolicyUpdate(self):
+        """Movement policy update. 
+            In principle this does a very simple thing: 
+            • updates time by dt, 
+            • updates position along the velocity direction 
+            • updates velocity (speed and direction) accoridng to a movement policy
+            In reality it's a complex function as the policy requires checking for immediate or upcoming collisions with all walls at each step.
+            This is done by function self.checkWallIntercepts()
+            What it does with this info (bounce off wall, turn to follow wall, etc.) depends on policy. 
+        """
 
-        proposedNewPos = self.pos + self.vel * self.dir * self.dt
+        self.t += self.dt
+        proposedNewPos = self.pos + self.speed * self.dir * self.dt
         proposedStep = np.array([self.pos,proposedNewPos])
         checkResult = self.checkWallIntercepts(proposedStep)
 
         if self.movementPolicy == 'randomWalk':
             if checkResult[0] != 'collisionNow': 
                 self.pos = proposedNewPos
-                randomTurnSpeed = np.random.normal(0,self.rotationalVelocityScale)
-                self.turn(turnAngle=randomTurnSpeed*self.dt)
+                randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
+                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*self.dt)
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
-                self.wallBounce(wall)
+                self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
         
         if self.movementPolicy == 'raudies':
             if checkResult[0] == 'noImmediateCollision':
                 self.pos = proposedNewPos
-                self.vel = np.random.rayleigh(self.velocityScale)
-                randomTurnSpeed = np.random.normal(0,self.rotationalVelocityScale)
-                self.turn(turnAngle=randomTurnSpeed*self.dt)
+                self.speed = np.random.rayleigh(self.speedScale)
+                randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
+                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*self.dt)
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
-                self.wallBounce(wall)
+                self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
             if checkResult[0] == 'collisionAhead':
                 wall = checkResult[1]
-                self.wallFollow(wall)
-                randomTurnSpeed = np.random.normal(0,self.rotationalVelocityScale)
-                self.turn(turnAngle=randomTurnSpeed*self.dt)
+                self.dir = wallBounceOrFollow(self.dir,wall,'follow')
+                randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
+                self.dir = turn(self.dir, turnAngle=randomTurnSpeed*self.dt)
 
         if self.movementPolicy == 'windowsScreensaver':
             if checkResult[0] != 'collisionNow': 
                 self.pos = proposedNewPos
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
-                self.wallBounce(wall)
+                self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
         
         if self.mazeType == 'loop':
             self.pos[0] = self.pos[0] % self.roomSize
 
-    def initialiseMaze(self):
+    def _toggleDoors(self, doorsClosed = None): #this function could be made more advanced to toggle more maze options
+        """Opens or closes door and updates mazeState
+            mazeState stores the most recent version of the maze walls dictionary which will include 'door' wall only if doorsClosed is True
+        Args:
+            doorsClosed ([bool], optional): True is doors to be closed, False if doors to be opened. Defaults to None, in which case current door state is flipped.
+        Returns:
+            [dict]: the walls dictionary
+        """        
+        if doorsClosed is not None: 
+            self.doorsClosed = doorsClosed
+        else: self.doorsClosed = not self.doorsClosed
 
-        self.doorState = 'closed' 
-        self.walls = {}
-        self.mazeState = {}
-        rs = self.roomSize
-        dx = self.dx
-
-        if self.mazeType == 'oneRoom': 
-            self.walls['room1'] = np.array([
-                                    [[0,0],[0,rs]],
-                                    [[0,rs],[rs,rs]],
-                                    [[rs,rs],[rs,0]],
-                                    [[rs,0],[0,0]]])
-
-            self.xArray = np.arange(dx/2,rs,dx)
-            self.yArray = np.arange(dx/2,rs,dx)[::-1]
-            self.extent = (0,rs,0,rs)
-
-        if self.mazeType == 'twoRooms': 
-            self.walls['room1'] = np.array([
-                                    [[0,0],[0,rs]],
-                                    [[0,rs],[rs,rs]],
-                                    [[rs,rs],[rs,0.6*rs]],
-                                    [[rs,0.4*rs],[rs,0]],
-                                    [[rs,0],[0,0]]])
-            self.walls['room2'] = np.array([
-                                    [[rs,0],[rs,0.4*rs]],
-                                    [[rs,0.6*rs],[rs,rs]],
-                                    [[rs,rs],[2*rs,rs]],
-                                    [[2*rs,rs],[2*rs,0]],
-                                    [[2*rs,0],[rs,0]]])
-            self.walls['doors'] = np.array([[[rs,0.4*rs],[rs,0.6*rs]]])
-
-            self.xArray = np.arange(dx/2,2*rs,dx)
-            self.yArray = np.arange(dx/2,rs,dx)[::-1]
-            self.extent = (0,2*rs,0,rs)
-
-        if self.mazeType == 'fourRooms': 
-            self.walls['room1'] = np.array([
-                                    [[0,0],[0,rs]],
-                                    [[0,rs],[0.4*rs,rs]],
-                                    [[0.6*rs,rs],[rs,rs]],
-                                    [[rs,rs],[rs,0.6*rs]],
-                                    [[rs,0.4*rs],[rs,0]],
-                                    [[rs,0],[0,0]]])
-            self.walls['room2'] = np.array([
-                                    [[rs,0],[rs,0.4*rs]],
-                                    [[rs,0.6*rs],[rs,rs]],
-                                    [[rs,rs],[1.4*rs,rs]],
-                                    [[1.6*rs,rs],[2*rs,rs]],
-                                    [[2*rs,rs],[2*rs,0]],
-                                    [[2*rs,0],[rs,0]]])
-            self.walls['room3'] = np.array([
-                                    [[0,rs],[0.4*rs,rs]],
-                                    [[0.6*rs,rs],[rs,rs]],
-                                    [[rs,rs],[rs,1.4*rs]],
-                                    [[rs,1.6*rs],[rs,2*rs]],
-                                    [[rs,2*rs],[0,2*rs]],
-                                    [[0,2*rs],[0,rs]]])
-            self.walls['room4'] = np.array([
-                                    [[rs,rs],[1.4*rs,rs]],
-                                    [[1.6*rs,rs],[2*rs,rs]],
-                                    [[2*rs,rs],[2*rs,2*rs]],
-                                    [[2*rs,2*rs],[rs,2*rs]],
-                                    [[rs,2*rs],[rs,1.6*rs]],
-                                    [[rs,1.4*rs],[rs,rs]]])
-            self.walls['doors'] = np.array([[[rs,0.4*rs],[rs,0.6*rs]],
-                                            [[0.4*rs,rs],[0.6*rs,rs]],
-                                            [[rs,1.4*rs],[rs,1.6*rs]],
-                                            [[1.4*rs,rs],[1.6*rs,rs]]])
-
-            self.xArray = np.arange(dx/2,2*rs,dx)
-            self.yArray = np.arange(dx/2,2*rs,dx)[::-1]
-            self.extent = (0,2*rs,0,2*rs)
-        
-        if self.mazeType == 'twoRoomPassage':
-            self.walls['room1'] = np.array([
-                                    [[0,0],[rs,0]],
-                                    [[rs,0],[rs,rs]],
-                                    [[rs,rs],[0.75*rs,rs]],
-                                    [[0.25*rs,rs],[0,rs]],
-                                    [[0,rs],[0,0]]])
-            self.walls['room2'] = np.array([
-                                    [[rs,0],[2*rs,0]],
-                                    [[2*rs,0],[2*rs,rs]],
-                                    [[2*rs,rs],[1.75*rs,rs]],
-                                    [[1.25*rs,rs],[rs,rs]],
-                                    [[rs,rs],[rs,0]]])
-            self.walls['room3'] = np.array([
-                                    [[0,rs],[0,1.4*rs]],
-                                    [[0,1.4*rs],[2*rs,1.4*rs]],
-                                    [[2*rs,1.4*rs],[2*rs,rs]]])
-            self.walls['doors'] = np.array([[[0.25*rs,rs],[0.75*rs,rs]],
-                                            [[1.25*rs,rs],[1.75*rs,rs]]])
-
-
-            self.xArray = np.arange(dx/2,2*rs,dx)
-            self.yArray = np.arange(dx/2,1.2*rs,dx)[::-1]
-            self.extent = (0,2*rs,0,1.2*rs)
-
-        if self.mazeType == 'longCorridor':
-            self.walls['room1'] = np.array([
-                                    [[0,0],[0,rs]],
-                                    [[0,rs],[rs,rs]],
-                                    [[rs,rs],[rs,0]],
-                                    [[rs,0],[0,0]]])
-            self.walls['longbarrier'] = np.array([
-                                    [[0.1*rs,0],[0.1*rs,0.9*rs]],
-                                    [[0.2*rs,rs],[0.2*rs,0.1*rs]],
-                                    [[0.3*rs,0],[0.3*rs,0.9*rs]],
-                                    [[0.4*rs,rs],[0.4*rs,0.1*rs]],
-                                    [[0.5*rs,0],[0.5*rs,0.9*rs]],
-                                    [[0.6*rs,rs],[0.6*rs,0.1*rs]],
-                                    [[0.7*rs,0],[0.7*rs,0.9*rs]],
-                                    [[0.8*rs,rs],[0.8*rs,0.1*rs]],
-                                    [[0.9*rs,0],[0.9*rs,0.9*rs]]
-            ])
-            self.pos = np.array([0.05,0.05])
-            self.dir = np.array([0,1])
-
-            self.xArray = np.arange(dx/2,rs,dx)
-            self.yArray = np.arange(dx/2,rs,dx)[::-1]
-            self.extent = (0,rs,0,rs)
-
-        if self.mazeType == 'rectangleRoom': 
-            ratio = np.pi/2.8
-            self.walls['room1'] = np.array([
-                                    [[0,0],[0,rs]],
-                                    [[0,rs],[ratio*rs,rs]],
-                                    [[ratio*rs,rs],[ratio*rs,0]],
-                                    [[ratio*rs,0],[0,0]]])
-
-            self.xArray = np.arange(dx/2,ratio*rs,dx)
-            self.yArray = np.arange(dx/2,rs,dx)[::-1]
-            self.extent = (0,ratio*rs,0,rs)
-        
-        if self.mazeType == 'loop': 
-            height = 0.05
-            self.walls['room'] = np.array([
-                                    [[0,0],[rs,0]],
-                                    [[0,height*rs],[rs,height*rs]]])
-            self.walls['doors'] = np.array([
-                                    [[0,0],[0,height*rs]],
-                                    [[rs,0],[rs,height*rs]]])
-            self.pos = np.array([0.05,0.05])
-            self.dir = np.array([1,0])
-            self.xArray = np.arange(dx/2,rs,dx)
-            self.yArray = np.arange(dx/2,height*rs,dx)[::-1]
-            self.extent = (0,rs,0,height*rs)
-        
-        x_mesh, y_mesh = np.meshgrid(self.xArray,self.yArray)
-        coordinate_mesh = np.array([x_mesh, y_mesh])
-        self.discreteCoords = np.swapaxes(np.swapaxes(coordinate_mesh,0,1),1,2) #an array of discretised position coords over entire map extent 
-
-        self.mazeState['walls'] = self.walls
-        self.mazeState['extent'] = self.extent
-
-
-        if self.stateType == 'onehot': 
-            self.stateSize = len(self.xArray) * len(self.yArray)
-            self.stateVec_asMatrix = np.zeros(shape=self.discreteCoords.shape[:-1])
-            self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
-            self.M = np.eye(self.stateSize) / self.stateSize
-            # self.M = np.zeros(shape=(self.stateSize,self.stateSize))
-            self.M_sparse = csr_matrix(self.M)
-
-        if self.stateType == 'placeFields' or self.stateType == 'circles':
-            self.stateSize = self.nCells
-            xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
-            ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
-            self.centres = np.array([xcentres,ycentres]).T
-            # self.centres[-1] = np.array([0.5*self.extent[1],0.5*self.extent[3]]) #add in a known centre
-            # self.centres[-2] = np.array([0.95*self.extent[1],0.5*self.extent[3]]) #add in a known centre
-            # self.centres[-3] = np.array([0.05*self.extent[1],0.5*self.extent[3]]) #add in a known centre
-            # self.centres[-4] = np.array([0.95*self.extent[1],0.95*self.extent[3]]) #add in a known centre
-            # self.centres[-5] = np.array([0.05*self.extent[1],0.05*self.extent[3]]) #add in a known centre
-            # self.centres[-6] = np.array([0.5*self.extent[1],0.95*self.extent[3]]) #add in a known centre
-            inds = self.centres[:,0].argsort()
-            self.centres = self.centres[inds]
-            # self.M = np.random.randn(self.stateSize,self.stateSize) / self.stateSize**2
-            # self.M = np.zeros(shape=(self.stateSize,self.stateSize))
-            self.M = np.eye(self.stateSize) / self.stateSize
-  
-        if self.stateType == 'fourier':
-            self.stateSize = self.nCells
-            self.kVectors = np.random.rand(self.nCells,2) - 0.5
-            self.kVectors /= np.linalg.norm(self.kVectors, axis=1)[:,None]
-            self.kFreq = 2*np.pi / np.random.uniform(0.01,1,size=(self.nCells))
-            self.phi = np.random.uniform(0,2*np.pi,size=(self.nCells))
-            self.M = np.eye(self.stateSize) / self.stateSize
-        
-        self.toggleDoors(doorState = self.doorState)
-        # self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
-
-    def turn(self, turnAngle):
-        theta_ = theta(self.dir)
-        theta_ += turnAngle
-        theta_ = np.mod(theta_, 2*np.pi)
-        self.dir = np.array([np.cos(theta_),np.sin(theta_)])
-
-    def toggleDoors(self, doorState = None): #this function could be made more advanced to toggle more maze options
-        if doorState == 'open': self.doorState = 'open'
-        elif doorState == 'closed': self.doorState = 'closed'
-        elif doorState == None: 
-            currentDoorState == self.doorState
-            if currentDoorState == 'open': self.doorState = 'closed'
-            elif currentDoorState == 'closed': self.doorState = 'open'
-        
         walls = self.walls.copy()
-        if self.doorState == 'open': 
+        if self.doorsClosed == False: 
             del walls['doors']
             self.mazeState['walls'] = walls
-        elif self.doorState == 'closed': 
+        elif self.doorsClosed == True: 
             self.mazeState['walls'] = walls
 
         self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
 
         return self.mazeState['walls']
 
-
-
     def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
+        """Given the cuurent proposed step [currentPos, nextPos] it calculates whether a collision with any of the walls exists along this step.
+        There are three possibilities from most worrying to least: 
+            • there is a collision ON the current step. Do something immediately. 
+            • there is a collision along the current trajectory in the next few cm's, but not on the current step. Consider doing something. 
+            • there is no collision coming up soon. Carry on as you are. 
+        Args:
+            proposedStep (array): The proposed step. np.array( [ [x_current, y_current] , [x_next, y_next] ] )
+
+        Returns:
+            tuple: (str, array), (<whether there is no collision, collision now or collision ahead> , <the wall in question>)
+        """        
         s1, s2 = np.array(proposedStep[0]), np.array(proposedStep[1])
         pos = s1
         ds = s2 - s1
@@ -487,7 +384,7 @@ class MazeAgent():
         futureCollisionList = [[],[]]
 
         #check if the current step results in a collision 
-        walls = self.mazeState['walls']
+        walls = self.mazeState['walls'] #current wall state
 
         for wallObject in walls.keys():
             for wall in walls[wallObject]:
@@ -528,38 +425,39 @@ class MazeAgent():
         
         else:
             return ('noImmediateCollision',None)
-                  
-    def wallBounce(self,wall):
-        wallPerp = perp(wall[1] - wall[0])
-        if np.dot(wallPerp,self.dir) <= 0:
-            wallPerp = -wallPerp #it is now the perpendicular with smallest angle to dir 
-        wallPar = wall[1] - wall[0]
-        if np.dot(wallPar,self.dir) <= 0:
-            wallPar = -wallPar #it is now the parallel with smallest angle to dir 
-        wallPar, wallPerp = wallPar/np.linalg.norm(wallPar), wallPerp/np.linalg.norm(wallPerp) #normalise
-        dir_ = wallPar * np.dot(self.dir,wallPar) - wallPerp * np.dot(self.dir,wallPerp)
-        self.dir = dir_/np.linalg.norm(dir_)
-
-    def wallFollow(self,wall):
-        wallPar = wall[1] - wall[0]
-        if np.dot(wallPar,self.dir) <= 0:
-            wallPar = -wallPar #it is now the parallel with smallest angle to dir 
-        wallPar = wallPar/np.linalg.norm(wallPar)
-        dir_ = wallPar * np.dot(self.dir,wallPar)
-        self.dir = dir_/np.linalg.norm(dir_)
-        return
 
     def getPlaceFields(self, M):
+        """Calculates receptive fiels of all place cells 
+            There is one place cell for each feature cell. 
+            A place cell (as  in de Cothi 2020) is defined as a thresholded linear combination of feature cells
+            where the linear combination is a row of the SR matrix. 
+        Args:
+            M (array): SR matrix
+        Returns:
+            array: Receptive fields of shape [nCells, nX, nY]
+        """        
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
-        threshold_ = self.pcThreshold
+        threshold_ = self.placeCellThreshold
         threshold = threshold_*np.amax(placeFields,axis=(1,2))[:,None,None]
         placeFields = np.maximum(0,placeFields - threshold)
         return placeFields
 
     def getGridFields(self, M, alignToFinal=False):
+        """Calculates receptive fiels of all grid cells 
+            There is an equal number of grid cells as place cells and feature cells. 
+            A grid cell (as in de Cothi 2020) is defined as a thresholded linear combination of feature cells
+            where the linear combination weights are the eigenvectors of the SR matrix. 
+        Args:
+            M (array): SR matrix
+            alignToFinal (bool): Since negative of eigenvec is also eigenvec try maximise overlap with final one (for making animations)
+        Returns:
+            array: Receptive fields of shape [nCells, nX, nY]
+        """        
         _, eigvecs = np.linalg.eig(M) #"v[:,i] is the eigenvector corresponding to the eigenvalue w[i]"
         eigvecs = np.real(eigvecs)
         gridFields = np.einsum("ij,kli->jkl",eigvecs,self.discreteStates)
+        threshold_ = self.gridCellThreshold
+        threshold = threshold_*np.amax(gridFields,axis=(1,2))[:,None,None]
         if alignToFinal == True:
             grids_final_flat = np.reshape(self.gridFields,(self.stateSize,-1))
             grids_flat = np.reshape(gridFields,(self.stateSize,-1))
@@ -572,12 +470,11 @@ class MazeAgent():
     
     def posToState(self, pos, stateType=None): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
-        retyrns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
+        returns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
-            pos ([type]): [description]
-
+            pos (array): array of positions, final dimension must be size 2
         Returns:
-            [type]: [description]
+            array: array of states. Same shape as input except final dimension has gone from 2 to nCells.
         """ 
         if stateType == None: stateType = self.stateType
 
@@ -593,43 +490,221 @@ class MazeAgent():
             onehotcoord = y_s * len(self.yArray) + x_s
             states = (np.arange(self.stateSize) == onehotcoord[...,None]).astype(int)
         
-        if stateType == 'placeFields':
+        if stateType in ['gaussian','gaussianCS','circles']:
             centres = self.centres
             pos = np.expand_dims(pos,-2)
             diff = np.abs((centres - pos))
+            dev = np.linalg.norm(diff,axis=-1)
+            if stateType == 'circles':
+                states = dev
+                states = np.where(states > self.sigma1, 0, 1)
+            else: 
+                states = (1/self.sigma)*np.exp(-dev**2 / (2*self.sigma**2)) - (stateType == 'gaussianCS') * (1/(2*self.sigma))*np.exp(-dev**2 / (2*(2*self.sigma)**2))
+            
             if (self.mazeType == 'loop') and (self.doorState == 'open'):
                 diff_aroundloop = diff.copy()
                 diff_aroundloop[..., 0] = (self.extent[1]-self.extent[0]) - diff_aroundloop[..., 0]
-                dev = np.linalg.norm(diff,axis=-1)
                 dev_aroundloop = np.linalg.norm(diff_aroundloop,axis=-1)
-                states = (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma1**2)) - (1/self.sigma2)*np.exp(-dev**2 / (2*self.sigma2**2))
-                states_aroundloop = (1/self.sigma1)*np.exp(-dev_aroundloop**2 / (2*self.sigma1**2)) - (1/self.sigma2)*np.exp(-dev_aroundloop**2 / (2*self.sigma2**2))
-                states = states + states_aroundloop
-            else:
-                dev = np.linalg.norm(diff,axis=-1)
-                states = (1/self.sigma1)*np.exp(-dev**2 / (2*self.sigma1**2)) - (1/self.sigma2)*np.exp(-dev**2 / (2*self.sigma2**2))
+                if stateType == 'circles': 
+                    states_aroundloop = dev
+                    states_aroundloop = np.where(states > self.sigma1, 0, 1)
+                else:
+                    states_aroundloop = (1/self.sigma)*np.exp(-dev_aroundloop**2 / (2*self.sigma**2)) - (stateType == 'gaussianCS')*(1/(2*self.sigma))*np.exp(-dev_aroundloop**2 / (2*(2*self.sigma)**2))
+                states += states_aroundloop
+
             states = states/states.shape[-1]
-        if stateType == 'bvc':
-            pass
-        
+
         if stateType == 'fourier':
             phase = np.matmul(pos,self.kVectors.T) * self.kFreq + self.phi
             fr = np.cos(phase)
             states = fr 
 
-        if stateType == 'circles':
-            centres = self.centres
-            pos = np.expand_dims(pos,-2)
-            dev = np.linalg.norm((centres - pos),axis=-1)
-            states = dev
-            states = np.where(states > self.sigma1, 0, 1)
-            # states = states / len(states)
-
-
-
         return states
         
-def getWalls(mazeType, roomSize, **kwargs)
+def getWalls(mazeType, roomSize=1):
+    """Stores and returns dictionaries containing all the walls of a maze
+    Args:
+        mazeType (str): Name of the maze 
+        roomSize (int, optional): scaling parameter for roomsize. Defaults to 1 metre.
+    Returns:
+        dict: wall dictionary
+    """    
+    walls = {}
+    rs = roomSize
+    if mazeType == 'oneRoom':
+        walls['room1'] = np.array([
+                                [[0,0],[0,rs]],
+                                [[0,rs],[rs,rs]],
+                                [[rs,rs],[rs,0]],
+                                [[rs,0],[0,0]]])
+    elif mazeType == 'twoRooms':
+        walls['room1'] = np.array([
+                                [[0,0],[0,rs]],
+                                [[0,rs],[rs,rs]],
+                                [[rs,rs],[rs,0.6*rs]],
+                                [[rs,0.4*rs],[rs,0]],
+                                [[rs,0],[0,0]]])
+        walls['room2'] = np.array([
+                                [[rs,0],[rs,0.4*rs]],
+                                [[rs,0.6*rs],[rs,rs]],
+                                [[rs,rs],[2*rs,rs]],
+                                [[2*rs,rs],[2*rs,0]],
+                                [[2*rs,0],[rs,0]]])
+        walls['doors'] = np.array([[[rs,0.4*rs],[rs,0.6*rs]]])
+    elif mazeType == 'fourRooms':
+        walls['room1'] = np.array([
+                                [[0,0],[0,rs]],
+                                [[0,rs],[0.4*rs,rs]],
+                                [[0.6*rs,rs],[rs,rs]],
+                                [[rs,rs],[rs,0.6*rs]],
+                                [[rs,0.4*rs],[rs,0]],
+                                [[rs,0],[0,0]]])
+        walls['room2'] = np.array([
+                                [[rs,0],[rs,0.4*rs]],
+                                [[rs,0.6*rs],[rs,rs]],
+                                [[rs,rs],[1.4*rs,rs]],
+                                [[1.6*rs,rs],[2*rs,rs]],
+                                [[2*rs,rs],[2*rs,0]],
+                                [[2*rs,0],[rs,0]]])
+        walls['room3'] = np.array([
+                                [[0,rs],[0.4*rs,rs]],
+                                [[0.6*rs,rs],[rs,rs]],
+                                [[rs,rs],[rs,1.4*rs]],
+                                [[rs,1.6*rs],[rs,2*rs]],
+                                [[rs,2*rs],[0,2*rs]],
+                                [[0,2*rs],[0,rs]]])
+        walls['room4'] = np.array([
+                                [[rs,rs],[1.4*rs,rs]],
+                                [[1.6*rs,rs],[2*rs,rs]],
+                                [[2*rs,rs],[2*rs,2*rs]],
+                                [[2*rs,2*rs],[rs,2*rs]],
+                                [[rs,2*rs],[rs,1.6*rs]],
+                                [[rs,1.4*rs],[rs,rs]]])
+        walls['doors'] = np.array([[[rs,0.4*rs],[rs,0.6*rs]],
+                                        [[0.4*rs,rs],[0.6*rs,rs]],
+                                        [[rs,1.4*rs],[rs,1.6*rs]],
+                                        [[1.4*rs,rs],[1.6*rs,rs]]])
+    elif mazeType == 'twoRoomPassage':
+        walls['room1'] = np.array([
+                                [[0,0],[rs,0]],
+                                [[rs,0],[rs,rs]],
+                                [[rs,rs],[0.75*rs,rs]],
+                                [[0.25*rs,rs],[0,rs]],
+                                [[0,rs],[0,0]]])
+        walls['room2'] = np.array([
+                                [[rs,0],[2*rs,0]],
+                                [[2*rs,0],[2*rs,rs]],
+                                [[2*rs,rs],[1.75*rs,rs]],
+                                [[1.25*rs,rs],[rs,rs]],
+                                [[rs,rs],[rs,0]]])
+        walls['room3'] = np.array([
+                                [[0,rs],[0,1.4*rs]],
+                                [[0,1.4*rs],[2*rs,1.4*rs]],
+                                [[2*rs,1.4*rs],[2*rs,rs]]])
+        walls['doors'] = np.array([[[0.25*rs,rs],[0.75*rs,rs]],
+                                [[1.25*rs,rs],[1.75*rs,rs]]])
+    elif mazeType == 'longCorridor':
+        walls['room1'] = np.array([
+                                [[0,0],[0,rs]],
+                                [[0,rs],[rs,rs]],
+                                [[rs,rs],[rs,0]],
+                                [[rs,0],[0,0]]])
+        walls['longbarrier'] = np.array([
+                                [[0.1*rs,0],[0.1*rs,0.9*rs]],
+                                [[0.2*rs,rs],[0.2*rs,0.1*rs]],
+                                [[0.3*rs,0],[0.3*rs,0.9*rs]],
+                                [[0.4*rs,rs],[0.4*rs,0.1*rs]],
+                                [[0.5*rs,0],[0.5*rs,0.9*rs]],
+                                [[0.6*rs,rs],[0.6*rs,0.1*rs]],
+                                [[0.7*rs,0],[0.7*rs,0.9*rs]],
+                                [[0.8*rs,rs],[0.8*rs,0.1*rs]],
+                                [[0.9*rs,0],[0.9*rs,0.9*rs]]])
+    elif mazeType == 'rectangleRoom':
+        ratio = np.pi/2.8
+        walls['room1'] = np.array([
+                                [[0,0],[0,rs]],
+                                [[0,rs],[ratio*rs,rs]],
+                                [[ratio*rs,rs],[ratio*rs,0]],
+                                [[ratio*rs,0],[0,0]]])
+    elif mazeType == 'loop':
+        height = 0.05
+        walls['room'] = np.array([
+                                [[0,0],[rs,0]],
+                                [[0,height*rs],[rs,height*rs]]])
+        walls['doors'] = np.array([
+                                [[0,0],[0,height*rs]],
+                                [[rs,0],[rs,height*rs]]])
+    return walls
+
+#MOVEMENT FUNCTIONS
+def wallBounceOrFollow(currentDirection,wall,whatToDo='bounce'):
+    """Given current direction, and wall and an instruction returns a new direction which is the result of implementing that instruction on the current direction
+        wrt the wall. e.g. 'bounce' returns direction after elastic bounce off wall. 'follow' returns direction parallel to wall (closest to current heading)
+    Args:
+        currentDirection (array): the current direction vector
+        wall (array): start and end coordinates of the wall
+        whatToDo (str, optional): 'bounce' or 'follow'. Defaults to 'bounce'.
+    Returns:
+        array: new direction
+    """    
+    if whatToDo == 'bounce':
+        wallPerp = perp(wall[1] - wall[0])
+        if np.dot(wallPerp,currentDirection) <= 0:
+            wallPerp = -wallPerp #it is now the perpendicular with smallest angle to dir 
+        wallPar = wall[1] - wall[0]
+        if np.dot(wallPar,currentDirection) <= 0:
+            wallPar = -wallPar #it is now the parallel with smallest angle to dir 
+        wallPar, wallPerp = wallPar/np.linalg.norm(wallPar), wallPerp/np.linalg.norm(wallPerp) #normalise
+        dir_ = wallPar * np.dot(currentDirection,wallPar) - wallPerp * np.dot(currentDirection,wallPerp)
+        newDir = dir_/np.linalg.norm(dir_)
+    elif whatToDo == 'follow':
+        wallPar = wall[1] - wall[0]
+        if np.dot(wallPar,currentDirection) <= 0:
+            wallPar = -wallPar #it is now the parallel with smallest angle to dir 
+        wallPar = wallPar/np.linalg.norm(wallPar)
+        dir_ = wallPar * np.dot(currentDirection,wallPar)
+        newDir = dir_/np.linalg.norm(dir_)
+    return newDir
+
+def turn(currentDirection, turnAngle):
+    """Turns the current direction by an amount theta, modulus 2pi
+    Args:
+        currentDirection (array): current direction 2-vector
+        turnAngle (float): angle ot turn in radians
+    Returns:
+        array: new direction
+    """    
+    theta_ = theta(currentDirection)
+    theta_ += turnAngle
+    theta_ = np.mod(theta_, 2*np.pi)
+    newDirection = np.array([np.cos(theta_),np.sin(theta_)])
+    return newDirection
+
+def perp(a=None):
+    """Given 2-vector, a, returns its perpendicular
+    Args:
+        a (array, optional): 2-vector direction. Defaults to None.
+    Returns:
+        array: perpendicular to a
+    """    
+    b = np.empty_like(a)
+    b[0] = -a[1]
+    b[1] = a[0] 
+    return b
+
+def theta(segment):
+    """Given a 'segment' (either 2x2 start and end positions or 2x1 direction bearing) 
+         returns the 'angle' of this segment modulo 2pi
+    Args:
+        segment (array): The segment, (2,2) or (2,) array 
+    Returns:
+        float: angle of segment
+    """    
+    eps = 1e-6
+    if segment.shape == (2,): 
+        return np.mod(np.arctan2(segment[1],(segment[0] + eps)),2*np.pi)
+    elif segment.shape == (2,2):
+        return np.mod(np.arctan2((segment[1][1]-segment[0][1]),(segment[1][0] - segment[0][0] + eps)), 2*np.pi)
 
 class Visualiser():
     def __init__(self, mazeAgent):
@@ -768,21 +843,20 @@ class Visualiser():
         
     def plotPlaceFields(self, hist_id=-1):
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
-        for (i, centre) in enumerate(self.mazeAgent.centres):
+        centres = self.mazeAgent.centres.copy()
+        np.random.shuffle(centres)
+        for (i, centre) in enumerate(centres):
             ax.text(centre[0],centre[1],str(i),fontsize=3,horizontalalignment='center',verticalalignment='center')
-            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigma1, 2*self.mazeAgent.sigma1, alpha=0.5, facecolor= np.random.choice(['C0','C1','C2','C3','C4','C5']))
+            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), self.mazeAgent.sigma, self.mazeAgent.sigma, alpha=0.5, facecolor= np.random.choice(['C0','C1','C2','C3','C4','C5']))
             ax .add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
     
-    def plotHeatMap(self):
+    def plotHeatMap(self,smoothing=1):
         posdata = np.stack(self.mazeAgent.history['pos'])
-        bins = list(self.mazeAgent.discreteCoords.shape[:2])
+        bins = [int(n/smoothing) for n in list(self.mazeAgent.discreteCoords.shape[:2])]
         bins.reverse()
-        print(bins)
         hist = np.histogram2d(posdata[:,0],posdata[:,1],bins=bins)[0]
-        print(hist.T.shape)
-        print(self.mazeAgent.extent)
         fig, ax = self.plotMazeStructure(hist_id=-1)
         ax.imshow(hist.T, extent=self.mazeAgent.extent)
         return fig, ax
@@ -803,19 +877,6 @@ class Visualiser():
 
 
 
-wall_oneRoom = 
-def perp(a=None):
-    b = np.empty_like(a)
-    b[0] = -a[1]
-    b[1] = a[0] 
-    return b
-
-def theta(segment):
-    eps = 1e-6
-    if segment.shape == (2,): 
-        return np.mod(np.arctan2(segment[1],(segment[0] + eps)),2*np.pi)
-    elif segment.shape == (2,2):
-        return np.mod(np.arctan2((segment[1][1]-segment[0][1]),(segment[1][0] - segment[0][0] + eps)), 2*np.pi)
 
 
 def saveFigure(fig,saveTitle=""):
