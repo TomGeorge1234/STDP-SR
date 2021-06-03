@@ -1,4 +1,5 @@
 import numpy as np 
+from numpy import random
 import matplotlib.pyplot as plt 
 import random 
 import matplotlib
@@ -6,10 +7,12 @@ import pandas as pd
 from tqdm.notebook import tqdm
 from matplotlib.animation import FuncAnimation
 from matplotlib import rcParams
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from datetime import datetime 
 import time 
 import numbers
 import os
+import scipy 
 from cycler import cycler
 from scipy.sparse import csr_matrix
 plt.style.use("seaborn")
@@ -48,8 +51,10 @@ defaultParams = {
           'TDdx'               : 0.02,       #rough distance between TD learning updates, metres 
           'alpha'              : 0.01,       #TD learning rate 
           'nCells'             : None,       #how many features to use
-          'speedScale'           : 0.16,     #movement speed scale, metres/second
-          'rotSpeedScale'        : None,     #rotational speed scale, radians/second
+          'cellFiringRate'     : 10,         #peak firing rate of a cell (middle of place field, preferred theta phase)
+          'centres'            : None,       #array of receptive field positions. Overwrites nCells
+          'speedScale'         : 0.16,       #movement speed scale, metres/second
+          'rotSpeedScale'      : None,       #rotational speed scale, radians/second
           'initPos'            : None,       #initial position [x0, y0], metres
           'initDir'            : None,       #initial direction, unit vector
           'sigma'              : 0.3,        #feature cell width scale, relevant for  gaussin, gaussianCS, circles
@@ -170,11 +175,15 @@ class MazeAgent():
             self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
             self.M = np.eye(self.stateSize) / self.stateSize
             self.M_sparse = csr_matrix(self.M)
-        elif self.stateType in ['gaussian', 'gaussianCS', 'circles']:
-            self.stateSize = self.nCells
-            xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
-            ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
-            self.centres = np.array([xcentres,ycentres]).T
+        elif self.stateType in ['gaussian', 'gaussianCS','gaussianThreshold', 'circles']:
+            if self.centres is not None:
+                self.nCells = self.centres.shape[0]
+                self.stateSize = self.nCells
+            else:
+                self.stateSize=self.nCells
+                xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
+                ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
+                self.centres = np.array([xcentres,ycentres]).T
             inds = self.centres[:,0].argsort()
             self.centres = self.centres[inds]
             self.M = np.eye(self.stateSize) / self.stateSize
@@ -189,6 +198,10 @@ class MazeAgent():
         #array of states, one for each discretised position coordinate 
         print("   calculating state vector at all discretised positions")
         self.discreteStates = self.posToState(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
+        
+        #store time zero snapshot
+        snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
+        self.snapshots = self.snapshots.append(snapshot)
 
     def runRat(self, trainTime=10, plotColor=None,saveEvery=1):
         """The main experiment call.
@@ -205,7 +218,10 @@ class MazeAgent():
 
         steps = int(trainTime * 60 / self.dt) #number of steps to perform 
        
-        hist_t, hist_pos, hist_color, hist_runID = [0]*steps, [0]*steps, [(plotColor or 'C'+str(runID)]*steps, [self.runID]*steps
+        hist_t, hist_pos, hist_color, hist_runID = [0]*steps, [0]*steps, [(plotColor or 'C'+str(self.runID))]*steps, [self.runID]*steps
+        hist_FR = []
+        hist_thetaPhase = []
+        hist_spikes = []
         lastTDstep, n_TD, distanceToTD = 0, 0, np.random.exponential(self.TDdx) #2cm scale
         hist_pos[0], hist_t[0] = self.pos, self.t
         self._toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
@@ -237,13 +253,20 @@ class MazeAgent():
                     n_TD += 1
                     distanceToTD = np.random.exponential(self.TDdx)
                     hist_color[i] = 'r'
+                
+                thetaPhase = 4*(self.t%(1/4))*2*np.pi
+                fr, spikes = self.STDPupdate(thetaPhase,self.dt)
+                hist_FR.append(fr)
+                hist_spikes.append(spikes)
+                hist_thetaPhase.append(thetaPhase)
+                
             
             except KeyboardInterrupt:
                 break
 
         self.runID += 1
 
-        runHistory = pd.DataFrame({'t':hist_t[:i], 'pos':hist_pos[:i], 'color':hist_color[:i], 'runID':hist_runID[:i]})
+        runHistory = pd.DataFrame({'t':hist_t[:i], 'pos':hist_pos[:i], 'color':hist_color[:i], 'runID':hist_runID[:i], 'FiringRate':hist_FR[:i], 'thetaPhase':hist_thetaPhase[:i], 'spikes':hist_spikes[:i]})
         self.history = self.history.append(runHistory)
         snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
@@ -283,12 +306,42 @@ class MazeAgent():
         
         #normal TD learning 
         else:
-            delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            self.M = self.M + alpha * np.outer(delta, state)
+            # delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+            # self.M = self.M + alpha * np.outer(delta, state)
             # equivalent to
-            # delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
-            # self.M = self.M + alpha * np.outer(delta, prevState)
-        
+            delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
+            self.M = self.M + alpha * np.outer(delta, prevState)
+    
+    def STDPupdate(self,thetaPhase,dt): 
+        vectorToCellCentres = self.pos - self.centres
+        alongPathDistToCellCentre = (np.dot(vectorToCellCentres,self.dir) / np.linalg.norm(self.dir)) / self.sigma
+        preferedThetaPhase = np.pi - alongPathDistToCellCentre * np.pi
+        peakFR = self.posToState(self.pos)
+        sigmaTheta = np.pi/4
+        # print(f"x: {self.pos[0]:.2f}, ptp: {preferedThetaPhase[0]:.2f}, pfr: {peakFR[0]:.2f}, apd: {alongPathDistToCellCentre[0]:.2f}, tp: {thetaPhase:.2f}")
+        # thetaPhasor = np.array([np.cos(thetaPhase), np.sin(thetaPhase)])
+        # preferedThetaPhasors = np.array([np.cos(preferedThetaPhase),np.sin(preferedThetaPhase)])
+        # phaseDiff = np.matmul(preferedThetaPhasors.T,thetaPhasor)
+
+        phaseDiff = preferedThetaPhase - thetaPhase
+        currentFR = peakFR * np.exp(-(phaseDiff)**2 / (2*sigmaTheta**2))
+
+        # currentFR = np.zeros(self.centres.shape[0])
+        # for i in range(len(currentFR)):
+        #     alpha,beta = 0,0
+        #     if preferedThetaPhase[i] > np.pi:
+        #         alpha = 5 
+        #         beta = alpha/(preferedThetaPhase[i]/(2*np.pi)) - alpha
+        #     else: 
+        #         beta = 5
+        #         alpha = (beta * (preferedThetaPhase[i]/(2*np.pi))) / (1-(preferedThetaPhase[i]/(2*np.pi)))
+        #     currentFR[i] = peakFR[i] * scipy.stats.beta.pdf(thetaPhase/(2*np.pi),alpha,beta)
+
+        spikes = np.random.poisson(10 * dt * currentFR)
+        return currentFR, spikes
+
+
+
     def movementPolicyUpdate(self):
         """Movement policy update. 
             In principle this does a very simple thing: 
@@ -490,29 +543,33 @@ class MazeAgent():
             onehotcoord = y_s * len(self.yArray) + x_s
             states = (np.arange(self.stateSize) == onehotcoord[...,None]).astype(int)
         
-        if stateType in ['gaussian','gaussianCS','circles']:
+        if stateType in ['gaussian','gaussianCS','gaussianThreshold','circles']:
             centres = self.centres
             pos = np.expand_dims(pos,-2)
             diff = np.abs((centres - pos))
-            dev = np.linalg.norm(diff,axis=-1)
-            if stateType == 'circles':
-                states = dev
-                states = np.where(states > self.sigma1, 0, 1)
-            else: 
-                states = (1/self.sigma)*np.exp(-dev**2 / (2*self.sigma**2)) - (stateType == 'gaussianCS') * (1/(2*self.sigma))*np.exp(-dev**2 / (2*(2*self.sigma)**2))
+            dev = [np.linalg.norm(diff,axis=-1)]
             
-            if (self.mazeType == 'loop') and (self.doorState == 'open'):
+            if (self.mazeType == 'loop') and (self.doorsClosed == False):
                 diff_aroundloop = diff.copy()
                 diff_aroundloop[..., 0] = (self.extent[1]-self.extent[0]) - diff_aroundloop[..., 0]
                 dev_aroundloop = np.linalg.norm(diff_aroundloop,axis=-1)
-                if stateType == 'circles': 
-                    states_aroundloop = dev
-                    states_aroundloop = np.where(states > self.sigma1, 0, 1)
-                else:
-                    states_aroundloop = (1/self.sigma)*np.exp(-dev_aroundloop**2 / (2*self.sigma**2)) - (stateType == 'gaussianCS')*(1/(2*self.sigma))*np.exp(-dev_aroundloop**2 / (2*(2*self.sigma)**2))
-                states += states_aroundloop
+                dev.append(dev_aroundloop)
 
-            states = states/states.shape[-1]
+            states = np.zeros_like(dev[0])
+
+            for devs in dev:
+                if stateType == 'circles':
+                    states_ = devs
+                    states_ = np.where(states > self.sigma1, 0, 1)
+                elif stateType == 'gaussian': 
+                    np.exp(-devs**2 / (2*self.sigma**2))
+                elif stateType == 'gaussianCS':
+                    states_ = (np.exp(-devs**2 / (2*self.sigma**2)) -  (1/2)*np.exp(-devs**2 / (2*(2*self.sigma)**2)) )  / (1/2)
+                elif stateType == 'gaussianThreshold':
+                     states_ = np.maximum(np.exp(-devs**2 / (2*self.sigma**2)) - np.exp(-1/2) , 0) / (1-np.exp(-1/2))
+                states += states_
+
+            states = states #all circle states st maximum FR = 1
 
         if stateType == 'fourier':
             phase = np.matmul(pos,self.kVectors.T) * self.kFreq + self.phi
@@ -717,7 +774,7 @@ class Visualiser():
         extent, walls = snapshot['mazeState']['extent'], snapshot['mazeState']['walls']
 
         if (fig, ax) == (None, None): 
-            fig, ax = plt.subplots(figsize=(2*(extent[1]-extent[0]),2*(extent[3]-extent[2])))
+            fig, ax = plt.subplots(figsize=(4*(extent[1]-extent[0]),4*(extent[3]-extent[2])))
         for wallObject in walls.keys():
             for wall in walls[wallObject]:
                 ax.plot([wall[0][0],wall[1][0]],[wall[0][1],wall[1][1]],color='darkgrey',linewidth=2)
@@ -728,21 +785,26 @@ class Visualiser():
         ax.axis('off')
         return fig, ax
     
-    def plotTrajectory(self,hist_id=-1,endtime=2):
-        fig, ax = self.plotMazeStructure(hist_id=hist_id)
+    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=1):
+        if (fig, ax) == (None, None):
+            fig, ax = self.plotMazeStructure(hist_id=hist_id)
+        startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
         endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
-        trajectory = np.stack(self.history['pos'][:endid])
-        color = np.stack(self.history['color'][:endid])
-        ax.scatter(trajectory[:,0],trajectory[:,1],s=0.2,alpha=0.7,c=color)
+        trajectory = np.stack(self.history['pos'][startid:endid])[::skiprate]
+        color = np.stack(self.history['color'][startid:endid])[::skiprate]
+        ax.scatter(trajectory[:,0],trajectory[:,1],s=0.4,alpha=0.7,c=color,zorder=2)
         saveFigure(fig, "trajectory")
         return fig, ax
 
     
-    def plotM(self,hist_id=-1):
+    def plotM(self,hist_id=-1, M=None):
         fig, ax = plt.subplots(figsize=(2,2))
-        M = self.snapshots.iloc[hist_id]['M']
+        if M is None: 
+            M = self.snapshots.iloc[hist_id]['M']
         im = ax.imshow(M)
-        fig.colorbar(im, ax=ax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+        fig.colorbar(im, cax=cax)
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
@@ -769,7 +831,7 @@ class Visualiser():
         
         snapshot = self.snapshots.iloc[hist_id]
         M = snapshot['M']
-        t = snapshot['t'] / 60
+        t = int(np.round(snapshot['t'] / 60))
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M)
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
@@ -841,14 +903,18 @@ class Visualiser():
         saveFigure(fig, "gridField")
         return fig, ax
         
-    def plotPlaceFields(self, hist_id=-1):
+    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=True):
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
         centres = self.mazeAgent.centres.copy()
-        np.random.shuffle(centres)
+        ids = np.arange(len(centres))
+        if shufflebeforeplot==True:
+            np.random.shuffle(ids)
+        centres = centres[ids]
         for (i, centre) in enumerate(centres):
-            ax.text(centre[0],centre[1],str(i),fontsize=3,horizontalalignment='center',verticalalignment='center')
-            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), self.mazeAgent.sigma, self.mazeAgent.sigma, alpha=0.5, facecolor= np.random.choice(['C0','C1','C2','C3','C4','C5']))
-            ax .add_patch(circle)
+            if textlabel==True:
+                ax.text(centre[0],centre[1],str(ids[i]),fontsize=3,horizontalalignment='center',verticalalignment='center')
+            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigma, 2*self.mazeAgent.sigma, alpha=0.2, facecolor= 'C'+str(i))
+            ax.add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
     
@@ -879,19 +945,27 @@ class Visualiser():
 
 
 
-def saveFigure(fig,saveTitle=""):
-	"""saves figure to file, by data (folder) and time (name) 
-	Args:
-		fig (matplotlib fig object): the figure to be saved
-		saveTitle (str, optional): name to be saved as. Current time will be appended to this Defaults to "".
-	"""	
-	today =  datetime.strftime(datetime.now(),'%y%m%d')
-	if not os.path.isdir(f"./figures/{today}/"):
-		os.mkdir(f"./figures/{today}/")
-	figdir = f"./figures/{today}/"
-	now = datetime.strftime(datetime.now(),'%H%M')
-	path = f"{figdir}{saveTitle}_{now}.png"
-	fig.savefig(f"{figdir}{saveTitle}_{now}.pdf", dpi=400,tight_layout=True)
-	return path
+def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True):
+    """saves figure to file, by data (folder) and time (name) 
+    Args:
+        fig (matplotlib fig object): the figure to be saved
+        saveTitle (str, optional): name to be saved as. Current time will be appended to this Defaults to "".
+    """	
+
+    today =  datetime.strftime(datetime.now(),'%y%m%d')
+    if not os.path.isdir(f"./figures/{today}/"):
+        os.mkdir(f"./figures/{today}/")
+    figdir = f"./figures/{today}/"
+    now = datetime.strftime(datetime.now(),'%H%M')
+    path_ = f"{figdir}{saveTitle}_{now}"
+    path = path_
+    i=1
+    while True:
+        if os.path.isfile(path+".pdf"):
+            path = path_+"_"+str(i)
+            i+=1
+        else: break
+    fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
+    return path
 
 
