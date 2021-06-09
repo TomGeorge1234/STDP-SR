@@ -165,7 +165,7 @@ class MazeAgent():
         if self.nCells is None: 
             ex = self.extent
             area, pcarea  = (ex[1]-ex[0])*(ex[3]-ex[2]), np.pi * ((self.sigma/2)**2)
-            self.nCells = int(10 * area / pcarea) #~10 in any given place
+            self.nCells = int(20 * area / pcarea) #~10 in any given place
             
         #initialise basis cells and M (successor matrix)
         print("   initialising basis features for learning")
@@ -242,6 +242,7 @@ class MazeAgent():
                 self.movementPolicyUpdate()
                 hist_pos[i], hist_t[i] = self.pos, self.t
 
+                alpha = self.alpha
                 try: alpha_ = alpha[0] * np.exp(-(i/steps)*(np.log(self.alpha[0]/self.alpha[1])))
                 except: alpha_ = self.alpha
 
@@ -253,12 +254,16 @@ class MazeAgent():
                     n_TD += 1
                     distanceToTD = np.random.exponential(self.TDdx)
                     hist_color[i] = 'r'
+
+                    # self.M = np.maximum(0,self.M)
                 
                 thetaPhase = 4*(self.t%(1/4))*2*np.pi
                 fr, spikes = self.STDPupdate(thetaPhase,self.dt)
                 hist_FR.append(fr)
                 hist_spikes.append(spikes)
                 hist_thetaPhase.append(thetaPhase)
+
+
                 
             
             except KeyboardInterrupt:
@@ -306,18 +311,21 @@ class MazeAgent():
         
         #normal TD learning 
         else:
-            # delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            # self.M = self.M + alpha * np.outer(delta, state)
-            # equivalent to
-            delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
-            self.M = self.M + alpha * np.outer(delta, prevState)
+            delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+            self.M = self.M + alpha * np.outer(delta, state)
+            # equivalent to...
+            # delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
+            # self.M = self.M + alpha * np.outer(delta, prevState)
+            # are more general versions of...
+            # delta = prevState + self.M @ ( 0.99 * state - prevState)
+            # self.M = self.M + alpha * np.outer(delta, prevState)
     
     def STDPupdate(self,thetaPhase,dt): 
         vectorToCellCentres = self.pos - self.centres
         alongPathDistToCellCentre = (np.dot(vectorToCellCentres,self.dir) / np.linalg.norm(self.dir)) / self.sigma
-        preferedThetaPhase = np.pi - alongPathDistToCellCentre * np.pi
+        preferedThetaPhase = np.pi - alongPathDistToCellCentre * (2/3) * np.pi
         peakFR = self.posToState(self.pos)
-        sigmaTheta = np.pi/4
+        sigmaTheta = np.pi/8
         # print(f"x: {self.pos[0]:.2f}, ptp: {preferedThetaPhase[0]:.2f}, pfr: {peakFR[0]:.2f}, apd: {alongPathDistToCellCentre[0]:.2f}, tp: {thetaPhase:.2f}")
         # thetaPhasor = np.array([np.cos(thetaPhase), np.sin(thetaPhase)])
         # preferedThetaPhasors = np.array([np.cos(preferedThetaPhase),np.sin(preferedThetaPhase)])
@@ -816,7 +824,7 @@ class Visualiser():
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False):
+    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True):
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time).abs().to_numpy().argmin()
         #if a figure/ax objects are passed, clear the axis and replot the maze
@@ -839,7 +847,8 @@ class Visualiser():
             ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
         if show==False:
             plt.close(fig)
-        saveFigure(fig, "placeField")
+        if save==True:
+            saveFigure(fig, "placeField")
         return fig, ax
     
     def plotReceptiveField(self, number=None, hist_id=-1, fig=None, ax=None, show=True):
@@ -855,7 +864,7 @@ class Visualiser():
         return fig, ax
     
 
-    def plotGridField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False, plotTimeStamp=False):
+    def plotGridField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False, plotTimeStamp=False,save=True):
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
 
@@ -900,7 +909,8 @@ class Visualiser():
             if show==False:
                 plt.close(fig)
         
-        saveFigure(fig, "gridField")
+        if save==True:
+            saveFigure(fig, "gridField")
         return fig, ax
         
     def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=True):
@@ -930,22 +940,21 @@ class Visualiser():
 
     def animateField(self, number=0,field='place',interval=100):
         if field == 'place':
-            fig, ax = self.plotPlaceField(hist_id=0,number=number,show=False)
-            anim = FuncAnimation(fig, self.plotPlaceField, fargs=(None, fig, ax, number, False, True, True), frames=len(self.snapshots), repeat=False, interval=interval)
+            fig, ax = self.plotPlaceField(hist_id=0,number=number,show=False,save=False)
+            anim = FuncAnimation(fig, self.plotPlaceField, fargs=(None, fig, ax, number, False, True, True, False), frames=len(self.snapshots), repeat=False, interval=interval)
         elif field == 'grid':
-            fig, ax = self.plotGridField(hist_id=0,number=number,show=False)
-            anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True), frames=len(self.snapshots), repeat=False, interval=interval)
+            fig, ax = self.plotGridField(hist_id=0,number=number,show=False,save=False)
+            anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True, False), frames=len(self.snapshots), repeat=False, interval=interval)
         today = datetime.strftime(datetime.now(),'%y%m%d')
         now = datetime.strftime(datetime.now(),'%H%M')
-        anim.save("./figures/animations/anim"+field+today+now+".mp4")
-
+        saveFigure(anim,saveTitle=field+"Animation",anim=True)
         return anim
 
 
 
 
 
-def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True):
+def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
     """saves figure to file, by data (folder) and time (name) 
     Args:
         fig (matplotlib fig object): the figure to be saved
@@ -961,11 +970,14 @@ def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True):
     path = path_
     i=1
     while True:
-        if os.path.isfile(path+".pdf"):
+        if os.path.isfile(path+".pdf") or os.path.isfile(path+".mp4"):
             path = path_+"_"+str(i)
             i+=1
         else: break
-    fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
+    if anim == True:
+        fig.save(path + ".mp4")
+    else:
+        fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
     return path
 
 
