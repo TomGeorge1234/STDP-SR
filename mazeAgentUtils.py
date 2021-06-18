@@ -1,20 +1,17 @@
 import numpy as np 
-from numpy import random
-import matplotlib.pyplot as plt 
-import random 
-import matplotlib
+
 import pandas as pd 
 from tqdm.notebook import tqdm
 from matplotlib.animation import FuncAnimation
 from matplotlib import rcParams
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from datetime import datetime 
-import time 
 import numbers
+from pprint import pprint as pprint
 import os
-import scipy 
-from cycler import cycler
-from scipy.sparse import csr_matrix
+
+import matplotlib
+import matplotlib.pyplot as plt 
 plt.style.use("seaborn")
 rcParams['figure.dpi']= 300
 rcParams['axes.labelsize']=5
@@ -36,6 +33,7 @@ rcParams['ytick.minor.pad']=2
 rcParams['xtick.color']='grey'
 rcParams['ytick.color']='grey'
 rcParams['figure.titlesize']='medium'
+from cycler import cycler
 rcParams['axes.prop_cycle']=cycler('color', ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'])
 rcParams['image.cmap'] = 'inferno'
 
@@ -60,7 +58,14 @@ defaultParams = {
           'sigma'              : 0.3,        #feature cell width scale, relevant for  gaussin, gaussianCS, circles
           'placeCellThreshold' : 0.5,        #place cell threshold value (fraction of its maximum)
           'gridCellThreshold'  : 0,          #grid cell threshold value (fraction of its maximum)
-          'doorsClosed'        : True        #whether doors are opened or closed in multicompartment maze
+          'doorsClosed'        : True,       #whether doors are opened or closed in multicompartment maze
+          'tau_pre'            : 20e-3,      #rate potentiating trace decays
+          'tau_post'           : 20e-3,      #rate depressing trace decays 
+          'eta_pre'            : 0.01,       #learning rate for pre to post strengthening 
+          'eta_post'           : 0.01,       #learning rate for post to pre weakening
+          'a_pre'              : 1,          #per trace bump when cell spikes
+          'a_post'             : 0.3,        #post trace bump when cell spikes
+          'w_max'              : 20e-3       #max STDP weights
 }
 
 class MazeAgent():
@@ -75,7 +80,8 @@ class MazeAgent():
         (ii) time continuous. Defined in terms of a memory decay time tau, not unitless gamma. Any two staes can be used fro a TD learning step irrespective of their seperation in time. 
     As the rat moves and learns its position and time stamps are continually saved. Periodically a snapshot of the current SR matrix and state of other parameters in the maze are also saved. 
     """   
-    def __init__(self,params={}):
+    def __init__(self,
+                params={}):
         """Sets the parameters of the maze anad agent (using default if not provided) 
         and initialises everything. This includes: 
         •initilising history dataframes
@@ -96,7 +102,8 @@ class MazeAgent():
         print("Initialising")
         self.initialise()
 
-    def updateParams(self, params : dict):        
+    def updateParams(self,
+                     params : dict):        
         """Updates parameters from a dictionary. 
         All parameters found in params will be updated to new value
 
@@ -113,8 +120,8 @@ class MazeAgent():
         #initialise history dataframes
         print("   making state/history dataframes")
         self.mazeState = {}
-        self.history = pd.DataFrame(columns = ['t','pos','color','runID']) 
-        self.snapshots = pd.DataFrame(columns = ['t','M','mazeState'])
+        self.history = pd.DataFrame(columns = ['t','pos','color','runID','firingRate','thetaPhase']) 
+        self.snapshots = pd.DataFrame(columns = ['t','M','W','mazeState'])
 
         #set pos/vel
         print("   initialising velocity, position and direction")
@@ -125,7 +132,9 @@ class MazeAgent():
         #time and runID
         print("   setting time/run counters")
         self.t = 0
-        self.runID = 0
+        self.runID = 0  
+        self.thetaPhase = 4*(self.t%(1/4))*2*np.pi
+
 
         #make maze 
         print("   making the maze walls")
@@ -173,8 +182,8 @@ class MazeAgent():
             self.stateSize = len(self.xArray) * len(self.yArray)
             self.stateVec_asMatrix = np.zeros(shape=self.discreteCoords.shape[:-1])
             self.stateVec_asVector = self.stateVec_asMatrix.reshape((-1))
-            self.M = np.eye(self.stateSize) / self.stateSize
-            self.M_sparse = csr_matrix(self.M)
+            self.M = np.eye(self.stateSize) 
+            # self.M = np.zeros((self.stateSize,self.stateSize))
         elif self.stateType in ['gaussian', 'gaussianCS','gaussianThreshold', 'circles']:
             if self.centres is not None:
                 self.nCells = self.centres.shape[0]
@@ -186,14 +195,20 @@ class MazeAgent():
                 self.centres = np.array([xcentres,ycentres]).T
             inds = self.centres[:,0].argsort()
             self.centres = self.centres[inds]
-            self.M = np.eye(self.stateSize) / self.stateSize
+            self.M = np.eye(self.stateSize)
+            # self.M = np.zeros((self.stateSize,self.stateSize))
+            # self.M = np.ones((self.stateSize,self.stateSize)) / self.stateSize
         elif self.stateType == 'fourier':
             self.stateSize = self.nCells
             self.kVectors = np.random.rand(self.nCells,2) - 0.5
             self.kVectors /= np.linalg.norm(self.kVectors, axis=1)[:,None]
             self.kFreq = 2*np.pi / np.random.uniform(0.01,1,size=(self.nCells))
             self.phi = np.random.uniform(0,2*np.pi,size=(self.nCells))
-            self.M = np.eye(self.stateSize) / self.stateSize
+            self.M = np.eye(self.stateSize)
+            #self.M = np.zeros((self.stateSize,self.stateSize))
+        
+        self.sigmas = np.array([self.sigma]*self.nCells)
+        # self.sigmas = np.random.uniform(self.sigma/3,2*self.sigma,size=(self.nCells))
 
         #array of states, one for each discretised position coordinate 
         print("   calculating state vector at all discretised positions")
@@ -203,7 +218,20 @@ class MazeAgent():
         snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
-    def runRat(self, trainTime=10, plotColor=None,saveEvery=1):
+        #STDP stuff
+        print("   initialising STDP weight matrix and traces")
+        self.W = np.zeros_like(self.M)
+        self.postTrace = np.zeros(self.nCells) #causes depression 
+        self.preTrace = np.zeros(self.nCells) #causes potentiation
+        self.lastSpikeTime = -10
+
+    def runRat(self,
+            trainTime=10,
+            plotColor=None,
+            saveEvery=1,
+            TDSRLearn=True,
+            STDPLearn=True,
+            TDlearnorder='distance'):
         """The main experiment call.
         A "run" consists of a period where the agent explores the maze according to the movement policy. 
         As it explores it learns, by TD, a successor representation over state vectors. 
@@ -214,66 +242,82 @@ class MazeAgent():
             trainTime (int, optional): How long to explore. Defaults to 10.
             plotColor (str, optional): When plotting trajectory, what color to plot it. Defaults to 'C0'.
             saveEvery (int, optional): Frequency to save snapshots, in minutes. Defaults to 1.
+            TDSRLearn (bool,optional): toggles whether to do TD learning 
+            STDPLearn (bool, optional): toggles whether to do STDP learning 
         """        
 
         steps = int(trainTime * 60 / self.dt) #number of steps to perform 
-       
-        hist_t, hist_pos, hist_color, hist_runID = [0]*steps, [0]*steps, [(plotColor or 'C'+str(self.runID))]*steps, [self.runID]*steps
-        hist_FR = []
-        hist_thetaPhase = []
-        hist_spikes = []
-        lastTDstep, n_TD, distanceToTD = 0, 0, np.random.exponential(self.TDdx) #2cm scale
-        hist_pos[0], hist_t[0] = self.pos, self.t
-        self._toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
 
+        hist_t = np.zeros(steps)
+        hist_pos = np.zeros((steps,2))
+        hist_plotColor = np.zeros(steps).astype(str)
+        hist_runID = np.zeros(steps)
+        hist_firingRate = np.zeros((steps,self.nCells))
+        hist_thetaPhase = np.zeros(steps)
+
+        self.toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
+        lastTDstep, distanceToTD = 0, np.random.exponential(self.TDdx) #2cm scale
+        
         """Main training loop. Principally on each iteration: 
             • always updates motion policy
             • often does TD learning step
-            • sometimes saves snapshot
-        """
-        for i in tqdm(range(1,steps)): #main training loop 
-            try:
-                #save snapshot 
-                if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
-                    snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
-                    self.snapshots = self.snapshots.append(snapshot)
 
+            • sometimes saves snapshot"""
+        for i in tqdm(range(steps)): #main training loop 
+            try:
                 #update pos, velocity, direction and time according to movement policy
                 self.movementPolicyUpdate()
-                hist_pos[i], hist_t[i] = self.pos, self.t
 
-                alpha = self.alpha
-                try: alpha_ = alpha[0] * np.exp(-(i/steps)*(np.log(self.alpha[0]/self.alpha[1])))
-                except: alpha_ = self.alpha
+                if i > 1:
+                    """STDP learning step"""
+                    if (STDPLearn == True) and (self.stateType in  ['gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
+                            hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
 
-                #maybe do TD step
-                if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
-                    dt_TD = self.t - hist_t[lastTDstep]
-                    self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dt_TD, tau=self.tau, alpha=alpha_)
-                    lastTDstep = i
-                    n_TD += 1
-                    distanceToTD = np.random.exponential(self.TDdx)
-                    hist_color[i] = 'r'
+                    """TD learning step"""
+                    if TDSRLearn == True: 
 
-                    # self.M = np.maximum(0,self.M)
-                
-                thetaPhase = 4*(self.t%(1/4))*2*np.pi
-                fr, spikes = self.STDPupdate(thetaPhase,self.dt)
-                hist_FR.append(fr)
-                hist_spikes.append(spikes)
-                hist_thetaPhase.append(thetaPhase)
+                        alpha = self.alpha
+                        try: alpha_ = alpha[0] * np.exp(-(i/steps)*(np.log(self.alpha[0]/self.alpha[1]))) #decaying alpha
+                        except: alpha_ = self.alpha
 
+                        if TDlearnorder == 'distance':
+                            if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
+                                dtTD = self.t - hist_t[lastTDstep]
+                                self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
+                                lastTDstep = i 
+                                distanceToTD = np.random.exponential(self.TDdx)
+                                hist_plotColor[i] = 'r'
 
-                
-            
-            except KeyboardInterrupt:
-                break
+                        elif TDlearnorder == 'decorrelated': 
+                            id2 = np.random.randint(i)
+                            learnDist = np.random.exponential(self.TDdx)
+                            id1 = max(0,id2 - max(1,int((learnDist/self.speedScale) / self.dt)))
+                            dtTD = hist_t[id2] - hist_t[id1]  
+                            self.TDLearningStep(pos=hist_pos[id2], prevPos=hist_pos[id1], dt=dtTD, tau=self.tau, alpha=alpha_)
+
+                        elif TDlearnorder == 'everystep':
+                            dtTD = self.t - hist_t[i-1]  
+                            self.TDLearningStep(pos=self.pos, prevPos=hist_pos[i-1], dt=dtTD, tau=self.tau, alpha=alpha_)
+
+                self.thetaPhase = 4*(self.t%(1/4))*2*np.pi
+
+                #update history arrays
+                hist_pos[i] = self.pos
+                hist_t[i] = self.t
+                hist_plotColor[i] = (plotColor or 'C'+str(self.runID))
+                hist_runID[i] = self.runID
+                hist_thetaPhase[i] = self.thetaPhase
+
+                #save snapshot 
+                if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
+                    snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
+                    self.snapshots = self.snapshots.append(snapshot)
+            except KeyboardInterrupt: break
 
         self.runID += 1
-
-        runHistory = pd.DataFrame({'t':hist_t[:i], 'pos':hist_pos[:i], 'color':hist_color[:i], 'runID':hist_runID[:i], 'FiringRate':hist_FR[:i], 'thetaPhase':hist_thetaPhase[:i], 'spikes':hist_spikes[:i]})
+        runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
         self.history = self.history.append(runHistory)
-        snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'mazeState':[self.mazeState]})
+        snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.M.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
         #find and save grid/place cells so you don't have to repeatedly calculate them when plotting 
@@ -281,7 +325,7 @@ class MazeAgent():
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, learnsparse=False):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, mask=False, asynchronus=False, regularisation=0):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -293,26 +337,38 @@ class MazeAgent():
             dt (float): time difference between two positions
             tau (float or int): memory decay time (analogous to gamma in TD, gamma = 1 - dt/tau)
             alpha (float): learning rate
-            learnsparse (bool): Whether to use scipy sparse matrix methods to increase SR learning speed for onehots
+            mask (bool or str): whether to mask TM update to update only cells near current location
+            asynchronus (bool): update cells asynchronusly (like hopfield)
         """
-        state = self.posToState(pos,stateType=self.stateType)
-        prevState = self.posToState(prevPos,stateType=self.stateType)
+        state = self.posToState(pos,stateType=self.stateType) 
+        prevState = self.posToState(prevPos,stateType=self.stateType) 
 
         #onehot optimised TD learning 
-        if (self.stateType == 'onehot'): 
+        if self.stateType == 'onehot': 
             s_t = np.argwhere(prevState)[0][0]
             s_tplus1 = np.argwhere(state)[0][0]
             delta = state + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
             self.M[:,s_t] = self.M[:,s_t] + alpha * delta
-            if learnsparse == True:
-                state_s, prevState_s = csr_matrix(state), csr_matrix(prevState)
-                delta = state_s.T + (tau / dt)* (np.dot(self.M_sparse, ((1 - dt/tau) * state_s - prevState_s).T))
-                self.M_sparse = self.M_sparse + alpha * np.dot(delta,state_s)
-        
+
         #normal TD learning 
         else:
-            delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            self.M = self.M + alpha * np.outer(delta, state)
+            if asynchronus == False: 
+                if mask != False: 
+                    # alpha = alpha * np.exp(-2*np.linalg.norm(self.centres - self.pos,axis=1)/self.sigma)
+                    alpha = alpha * np.exp(-np.linalg.norm(self.centres - self.pos,axis=1)**2/(2**(self.sigma/2)**2)).reshape((self.nCells,1))
+                delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+                self.M = (self.M +
+                          alpha * (np.outer(delta, state) -
+                          regularisation*(self.M**2)*self.M)
+                         )
+            elif asynchronus == True: 
+                for i in np.random.permutation(self.nCells):
+                    if mask is not False: 
+                        alpha = alpha * np.exp(-np.linalg.norm(self.centres[i] - self.pos,axis=1)**2/(2**(self.sigma/2)**2))
+                    delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+                    self.M[i,:] = (self.M[i,:] +
+                          alpha * np.outer(delta, state))[i,:]
+        
             # equivalent to...
             # delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
             # self.M = self.M + alpha * np.outer(delta, prevState)
@@ -320,35 +376,54 @@ class MazeAgent():
             # delta = prevState + self.M @ ( 0.99 * state - prevState)
             # self.M = self.M + alpha * np.outer(delta, prevState)
     
-    def STDPupdate(self,thetaPhase,dt): 
-        vectorToCellCentres = self.pos - self.centres
-        alongPathDistToCellCentre = (np.dot(vectorToCellCentres,self.dir) / np.linalg.norm(self.dir)) / self.sigma
+    def STDPLearningStep(self,dt): 
+        """Takes the curent theta phase and estimate firing rates for all basis cells according to a simple theta sweep model. 
+           From here it samples spikes and performs STDP learning on a weight matrix.
+
+        Args:
+            dt (float): Time step length 
+
+        Returns:
+            float array: vector of firing rates for this time step 
+        """        
+        thetaPhase = self.thetaPhase
+
+        vectorToCells = self.pos - self.centres
+        alongPathDistToCellCentre = (np.dot(vectorToCells,self.dir) / np.linalg.norm(self.dir))  / self.sigmas #as mutiple of sigma
         preferedThetaPhase = np.pi - alongPathDistToCellCentre * (2/3) * np.pi
         peakFR = self.posToState(self.pos)
         sigmaTheta = np.pi/8
-        # print(f"x: {self.pos[0]:.2f}, ptp: {preferedThetaPhase[0]:.2f}, pfr: {peakFR[0]:.2f}, apd: {alongPathDistToCellCentre[0]:.2f}, tp: {thetaPhase:.2f}")
-        # thetaPhasor = np.array([np.cos(thetaPhase), np.sin(thetaPhase)])
-        # preferedThetaPhasors = np.array([np.cos(preferedThetaPhase),np.sin(preferedThetaPhase)])
-        # phaseDiff = np.matmul(preferedThetaPhasors.T,thetaPhasor)
-
         phaseDiff = preferedThetaPhase - thetaPhase
         currentFR = peakFR * np.exp(-(phaseDiff)**2 / (2*sigmaTheta**2))
 
-        # currentFR = np.zeros(self.centres.shape[0])
-        # for i in range(len(currentFR)):
-        #     alpha,beta = 0,0
-        #     if preferedThetaPhase[i] > np.pi:
-        #         alpha = 5 
-        #         beta = alpha/(preferedThetaPhase[i]/(2*np.pi)) - alpha
-        #     else: 
-        #         beta = 5
-        #         alpha = (beta * (preferedThetaPhase[i]/(2*np.pi))) / (1-(preferedThetaPhase[i]/(2*np.pi)))
-        #     currentFR[i] = peakFR[i] * scipy.stats.beta.pdf(thetaPhase/(2*np.pi),alpha,beta)
+        spike_list = []
+        for cell in range(self.nCells):
+            fr = 20*currentFR[cell] + 0.5
+            n_spikes = np.random.poisson(fr*dt)
+            if n_spikes != 0: 
+                time_of_spikes = np.random.uniform(self.t,self.t+dt,n_spikes)
+                for time in time_of_spikes:
+                    spike_list.append([time,cell])
+        spike_list = np.array(spike_list)
+        if spike_list.shape[0] != 0: 
+            spike_list = spike_list[np.argsort(spike_list[:,0])]
+            lastSpikeTime = self.lastSpikeTime
+            for i in range(len(spike_list)):
+                time, cell = spike_list[i][0], int(spike_list[i][1])
+                timeDiff = time - lastSpikeTime 
+                self.postTrace = self.postTrace * np.exp(- timeDiff / self.tau_pre)
+                self.preTrace = self.preTrace * np.exp(- timeDiff / self.tau_post)
+                self.preTrace[cell] += self.a_pre
+                self.postTrace[cell] += self.a_post
+                weightsToPost = self.W[:,cell]
+                weightsToPost += (self.w_max - weightsToPost) * self.eta_pre * self.preTrace
+                weightsFromPost = self.W[cell,:]
+                weightsFromPost += - weightsToPost * self.eta_post * self.postTrace
+                lastSpikeTime = time 
 
-        spikes = np.random.poisson(10 * dt * currentFR)
-        return currentFR, spikes
+            self.lastSpikeTime=lastSpikeTime
 
-
+        return currentFR
 
     def movementPolicyUpdate(self):
         """Movement policy update. 
@@ -371,6 +446,22 @@ class MazeAgent():
                 self.pos = proposedNewPos
                 randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
                 self.dir = turn(self.dir,turnAngle=randomTurnSpeed*self.dt)
+            elif checkResult[0] == 'collisionNow':
+                wall = checkResult[1]
+                self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
+        
+        if self.movementPolicy == 'trueRandomWalk':
+            if checkResult[0] != 'collisionNow': 
+                self.pos = proposedNewPos
+                self.dir = turn(self.dir,turnAngle=np.random.uniform(0,2*np.pi))
+            elif checkResult[0] == 'collisionNow':
+                wall = checkResult[1]
+                self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
+        
+        if self.movementPolicy == 'leftRightRandomWalk':
+            if checkResult[0] != 'collisionNow': 
+                self.pos = proposedNewPos
+                self.dir = turn(self.dir,turnAngle=np.random.choice([0,np.pi]))
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
@@ -400,7 +491,7 @@ class MazeAgent():
         if self.mazeType == 'loop':
             self.pos[0] = self.pos[0] % self.roomSize
 
-    def _toggleDoors(self, doorsClosed = None): #this function could be made more advanced to toggle more maze options
+    def toggleDoors(self, doorsClosed = None): #this function could be made more advanced to toggle more maze options
         """Opens or closes door and updates mazeState
             mazeState stores the most recent version of the maze walls dictionary which will include 'door' wall only if doorsClosed is True
         Args:
@@ -513,7 +604,7 @@ class MazeAgent():
             alignToFinal (bool): Since negative of eigenvec is also eigenvec try maximise overlap with final one (for making animations)
         Returns:
             array: Receptive fields of shape [nCells, nX, nY]
-        """        
+        """
         _, eigvecs = np.linalg.eig(M) #"v[:,i] is the eigenvector corresponding to the eigenvalue w[i]"
         eigvecs = np.real(eigvecs)
         gridFields = np.einsum("ij,kli->jkl",eigvecs,self.discreteStates)
@@ -529,7 +620,7 @@ class MazeAgent():
         gridFields = np.maximum(0,gridFields)
         return gridFields
     
-    def posToState(self, pos, stateType=None): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+    def posToState(self, pos, stateType=None, normalise=True): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
         returns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
@@ -570,11 +661,11 @@ class MazeAgent():
                     states_ = devs
                     states_ = np.where(states > self.sigma1, 0, 1)
                 elif stateType == 'gaussian': 
-                    np.exp(-devs**2 / (2*self.sigma**2))
+                    states_ = np.exp(-devs**2 / (2*self.sigmas**2))
                 elif stateType == 'gaussianCS':
-                    states_ = (np.exp(-devs**2 / (2*self.sigma**2)) -  (1/2)*np.exp(-devs**2 / (2*(2*self.sigma)**2)) )  / (1/2)
+                    states_ = (np.exp(-devs**2 / (2*self.sigmas**2)) -  (1/2)*np.exp(-devs**2 / (2*(2*self.sigmas)**2)) )  / (1/2)
                 elif stateType == 'gaussianThreshold':
-                     states_ = np.maximum(np.exp(-devs**2 / (2*self.sigma**2)) - np.exp(-1/2) , 0) / (1-np.exp(-1/2))
+                     states_ = np.maximum(np.exp(-devs**2 / (2*self.sigmas**2)) - np.exp(-1/2) , 0) / (1-np.exp(-1/2))
                 states += states_
 
             states = states #all circle states st maximum FR = 1
@@ -583,6 +674,10 @@ class MazeAgent():
             phase = np.matmul(pos,self.kVectors.T) * self.kFreq + self.phi
             fr = np.cos(phase)
             states = fr 
+
+        #normalise state 
+        if normalise == True: 
+            states = states / np.linalg.norm(states,axis=-1)[...,np.newaxis]
 
         return states
         
@@ -805,18 +900,31 @@ class Visualiser():
         return fig, ax
 
     
-    def plotM(self,hist_id=-1, M=None):
-        fig, ax = plt.subplots(figsize=(2,2))
+    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",show=True,plotTimeStamp=False):
+        snapshot = self.snapshots.iloc[hist_id]
+        if (ax is not None) and (fig is not None): 
+            ax.clear()
+        else:
+            fig, ax = plt.subplots(figsize=(2,2))
         if M is None: 
-            M = self.snapshots.iloc[hist_id]['M']
+            M = snapshot['M']
+        t = int(np.round(snapshot['t']))
         im = ax.imshow(M)
         divider = make_axes_locatable(ax)
+        try: cax.clear()
+        except: 
+            pass
         cax = divider.append_axes("right", size="5%", pad=0.1)
         fig.colorbar(im, cax=cax)
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
-        saveFigure(fig, "M")
+        if save==True:
+            saveFigure(fig, "M"+savename)
+        if plotTimeStamp == True: 
+            ax.text(100, 5,"%g s"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
+        if show==False:
+            plt.close(fig)
         return fig, ax
 
 
@@ -921,10 +1029,11 @@ class Visualiser():
             np.random.shuffle(ids)
         centres = centres[ids]
         for (i, centre) in enumerate(centres):
-            if textlabel==True:
-                ax.text(centre[0],centre[1],str(ids[i]),fontsize=3,horizontalalignment='center',verticalalignment='center')
-            circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigma, 2*self.mazeAgent.sigma, alpha=0.2, facecolor= 'C'+str(i))
-            ax.add_patch(circle)
+            if i%10==0:
+                if textlabel==True:
+                    ax.text(centre[0],centre[1],str(ids[i]),fontsize=3,horizontalalignment='center',verticalalignment='center')
+                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.2, facecolor= 'C'+str(i))
+                ax.add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
     
@@ -945,13 +1054,14 @@ class Visualiser():
         elif field == 'grid':
             fig, ax = self.plotGridField(hist_id=0,number=number,show=False,save=False)
             anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True, False), frames=len(self.snapshots), repeat=False, interval=interval)
+        elif field == 'M':
+            fig, ax = self.plotM(hist_id=0,show=False,save=False)
+            anim = FuncAnimation(fig, self.plotM, fargs=(None, fig, ax, False, "", False,True), frames=len(self.snapshots), repeat=False, interval=interval)
+        
         today = datetime.strftime(datetime.now(),'%y%m%d')
         now = datetime.strftime(datetime.now(),'%H%M')
         saveFigure(anim,saveTitle=field+"Animation",anim=True)
         return anim
-
-
-
 
 
 def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
