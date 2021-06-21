@@ -312,7 +312,13 @@ class MazeAgent():
                 if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
                     snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
                     self.snapshots = self.snapshots.append(snapshot)
-            except KeyboardInterrupt: break
+            except KeyboardInterrupt: 
+                print("Keyboard Interrupt:")
+                break
+            except ValueError:
+                print("ValueError:")
+                print(f"   Rat position: {self.pos}")
+                break
 
         self.runID += 1
         runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
@@ -324,6 +330,9 @@ class MazeAgent():
         print("Calculating place and grid cells")
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
+
+        plotter = Visualiser(self)
+        plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
     def TDLearningStep(self, pos, prevPos, dt, tau, alpha, mask=False, asynchronus=False, regularisation=0):
         """TD learning step
@@ -490,6 +499,21 @@ class MazeAgent():
         
         if self.mazeType == 'loop':
             self.pos[0] = self.pos[0] % self.roomSize
+
+        #catchall instances a rat escapes the maze by accident, pops it 2cm within maze 
+        if ((self.pos[0] < self.extent[0]) or 
+            (self.pos[0] > self.extent[1]) or 
+            (self.pos[1] < self.extent[2]) or 
+            (self.pos[1] > self.extent[3])):
+            print(self.pos)
+            self.pos[0] = max(self.pos[0],self.extent[0]+0.02)
+            self.pos[0] = min(self.pos[0],self.extent[1]-0.02)
+            self.pos[1] = max(self.pos[1],self.extent[2]+0.02)
+            self.pos[1] = min(self.pos[1],self.extent[3]-0.02)
+            print("Rat escaped!")
+            # plotter = Visualiser(self)
+            # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
+
 
     def toggleDoors(self, doorsClosed = None): #this function could be made more advanced to toggle more maze options
         """Opens or closes door and updates mazeState
@@ -1029,10 +1053,10 @@ class Visualiser():
             np.random.shuffle(ids)
         centres = centres[ids]
         for (i, centre) in enumerate(centres):
-            if i%10==0:
+            # if i%10==0:
                 if textlabel==True:
                     ax.text(centre[0],centre[1],str(ids[i]),fontsize=3,horizontalalignment='center',verticalalignment='center')
-                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.2, facecolor= 'C'+str(i))
+                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.1, facecolor= 'C'+str(i))
                 ax.add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
