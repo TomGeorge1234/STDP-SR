@@ -365,11 +365,15 @@ class MazeAgent():
                 if mask != False: 
                     # alpha = alpha * np.exp(-2*np.linalg.norm(self.centres - self.pos,axis=1)/self.sigma)
                     alpha = alpha * np.exp(-np.linalg.norm(self.centres - self.pos,axis=1)**2/(2**(self.sigma/2)**2)).reshape((self.nCells,1))
-                delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+                
+
+                delta = prevState + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
                 self.M = (self.M +
-                          alpha * (np.outer(delta, state) -
+                          alpha * (np.outer(delta, prevState) -
                           regularisation*(self.M**2)*self.M)
                          )
+
+                
             elif asynchronus == True: 
                 for i in np.random.permutation(self.nCells):
                     if mask is not False: 
@@ -385,7 +389,7 @@ class MazeAgent():
             # delta = prevState + self.M @ ( 0.99 * state - prevState)
             # self.M = self.M + alpha * np.outer(delta, prevState)
     
-    def STDPLearningStep(self,dt): 
+    def STDPLearningStep(self,dt):       
         """Takes the curent theta phase and estimate firing rates for all basis cells according to a simple theta sweep model. 
            From here it samples spikes and performs STDP learning on a weight matrix.
 
