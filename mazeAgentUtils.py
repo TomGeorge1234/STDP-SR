@@ -175,7 +175,9 @@ class MazeAgent():
             ex = self.extent
             area, pcarea  = (ex[1]-ex[0])*(ex[3]-ex[2]), np.pi * ((self.sigma/2)**2)
             self.nCells = int(20 * area / pcarea) #~10 in any given place
-            
+        if self.mazeType == 'TMaze':
+            self.LRDecisionPending=True
+
         #initialise basis cells and M (successor matrix)
         print("   initialising basis features for learning")
         if self.stateType == 'onehot': 
@@ -267,7 +269,6 @@ class MazeAgent():
             try:
                 #update pos, velocity, direction and time according to movement policy
                 self.movementPolicyUpdate()
-
                 if i > 1:
                     """STDP learning step"""
                     if (STDPLearn == True) and (self.stateType in  ['gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
@@ -315,8 +316,9 @@ class MazeAgent():
             except KeyboardInterrupt: 
                 print("Keyboard Interrupt:")
                 break
-            except ValueError:
+            except ValueError as error:
                 print("ValueError:")
+                print(error)
                 print(f"   Rat position: {self.pos}")
                 break
 
@@ -334,7 +336,7 @@ class MazeAgent():
         plotter = Visualiser(self)
         plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, mask=False, asynchronus=False, regularisation=0):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, regularisation=0):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -361,34 +363,13 @@ class MazeAgent():
 
         #normal TD learning 
         else:
-            if asynchronus == False: 
-                if mask != False: 
-                    # alpha = alpha * np.exp(-2*np.linalg.norm(self.centres - self.pos,axis=1)/self.sigma)
-                    alpha = alpha * np.exp(-np.linalg.norm(self.centres - self.pos,axis=1)**2/(2**(self.sigma/2)**2)).reshape((self.nCells,1))
-                
-
-                delta = prevState + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-                self.M = (self.M +
-                          alpha * (np.outer(delta, prevState) -
-                          regularisation*(self.M**2)*self.M)
-                         )
+            delta = prevState + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+            self.M = (self.M +
+                        alpha * (np.outer(delta, prevState) -
+                        regularisation*(self.M**2)*self.M)
+                        )
 
                 
-            elif asynchronus == True: 
-                for i in np.random.permutation(self.nCells):
-                    if mask is not False: 
-                        alpha = alpha * np.exp(-np.linalg.norm(self.centres[i] - self.pos,axis=1)**2/(2**(self.sigma/2)**2))
-                    delta = state + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-                    self.M[i,:] = (self.M[i,:] +
-                          alpha * np.outer(delta, state))[i,:]
-        
-            # equivalent to...
-            # delta = prevState + (tau / dt) * (self.M @ (state - (1 + dt/tau)*prevState))
-            # self.M = self.M + alpha * np.outer(delta, prevState)
-            # are more general versions of...
-            # delta = prevState + self.M @ ( 0.99 * state - prevState)
-            # self.M = self.M + alpha * np.outer(delta, prevState)
-    
     def STDPLearningStep(self,dt):       
         """Takes the curent theta phase and estimate firing rates for all basis cells according to a simple theta sweep model. 
            From here it samples spikes and performs STDP learning on a weight matrix.
@@ -448,9 +429,9 @@ class MazeAgent():
             This is done by function self.checkWallIntercepts()
             What it does with this info (bounce off wall, turn to follow wall, etc.) depends on policy. 
         """
-
-        self.t += self.dt
-        proposedNewPos = self.pos + self.speed * self.dir * self.dt
+        dt = np.random.uniform(self.dt-0.01*self.dt,self.dt+0.01*self.dt)
+        self.t += dt
+        proposedNewPos = self.pos + self.speed * self.dir * dt
         proposedStep = np.array([self.pos,proposedNewPos])
         checkResult = self.checkWallIntercepts(proposedStep)
 
@@ -458,7 +439,7 @@ class MazeAgent():
             if checkResult[0] != 'collisionNow': 
                 self.pos = proposedNewPos
                 randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
-                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*self.dt)
+                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*dt)
             elif checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
@@ -484,7 +465,7 @@ class MazeAgent():
                 self.pos = proposedNewPos
                 self.speed = np.random.rayleigh(self.speedScale)
                 randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
-                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*self.dt)
+                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*dt)
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
@@ -492,7 +473,7 @@ class MazeAgent():
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'follow')
                 randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
-                self.dir = turn(self.dir, turnAngle=randomTurnSpeed*self.dt)
+                self.dir = turn(self.dir, turnAngle=randomTurnSpeed*dt)
 
         if self.movementPolicy == 'windowsScreensaver':
             if checkResult[0] != 'collisionNow': 
@@ -503,6 +484,19 @@ class MazeAgent():
         
         if self.mazeType == 'loop':
             self.pos[0] = self.pos[0] % self.roomSize
+        
+        if self.mazeType == 'TMaze':
+            if (self.pos[0] > self.roomSize+0.05) and (self.LRDecisionPending==True):
+                if np.random.choice([0,1],p=[0.75,0.25]) == 0:
+                    self.dir = np.array([0,1])
+                else:
+                    self.dir = np.array([0,-1])
+                self.LRDecisionPending=False
+            if self.pos[1] > self.extent[3] or self.pos[1] < self.extent[2]:
+                self.pos = np.array([0,1])
+                self.dir = np.array([1,0])
+                self.LRDecisionPending=True
+
 
         #catchall instances a rat escapes the maze by accident, pops it 2cm within maze 
         if ((self.pos[0] < self.extent[0]) or 
@@ -705,7 +699,7 @@ class MazeAgent():
 
         #normalise state 
         if normalise == True: 
-            states = states / np.linalg.norm(states,axis=-1)[...,np.newaxis]
+            states = states / (1e-6 + np.linalg.norm(states,axis=-1)[...,np.newaxis])
 
         return states
         
@@ -822,6 +816,16 @@ def getWalls(mazeType, roomSize=1):
         walls['doors'] = np.array([
                                 [[0,0],[0,height*rs]],
                                 [[rs,0],[rs,height*rs]]])
+    
+    elif mazeType == 'TMaze':
+        walls['corridorIn'] = np.array([
+                                [[0,0.05+rs],[rs,0.05+rs]],
+                                [[0,-0.05+rs],[rs,-0.05+rs]],
+                                [[rs,0.05+rs],[rs,rs+rs]],
+                                [[rs+0.1,rs+rs],[rs+0.1,-rs+rs]],
+                                [[rs,-0.05+rs],[rs,-rs+rs]]]) 
+        walls['doors'] = np.array([[[rs,-0.05+rs-0.5],[rs+0.1,-0.05+rs-0.5]]])                               
+
     return walls
 
 #MOVEMENT FUNCTIONS
