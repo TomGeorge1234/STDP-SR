@@ -195,8 +195,8 @@ class MazeAgent():
                 xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
                 ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
                 self.centres = np.array([xcentres,ycentres]).T
-            inds = self.centres[:,0].argsort()
-            self.centres = self.centres[inds]
+                inds = self.centres[:,0].argsort()
+                self.centres = self.centres[inds]
             self.M = np.eye(self.stateSize)
             # self.M = np.zeros((self.stateSize,self.stateSize))
             # self.M = np.ones((self.stateSize,self.stateSize)) / self.stateSize
@@ -270,6 +270,7 @@ class MazeAgent():
                 #update pos, velocity, direction and time according to movement policy
                 self.movementPolicyUpdate()
                 if i > 1:
+                    # print(self.pos)
                     """STDP learning step"""
                     if (STDPLearn == True) and (self.stateType in  ['gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
                             hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
@@ -333,10 +334,10 @@ class MazeAgent():
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
 
-        plotter = Visualiser(self)
-        plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
+        # plotter = Visualiser(self)
+        # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, regularisation=0):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha,highAccuracy=False):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -362,12 +363,13 @@ class MazeAgent():
             self.M[:,s_t] = self.M[:,s_t] + alpha * delta
 
         #normal TD learning 
-        else:
+        elif highAccuracy == False:
             delta = prevState + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
-            self.M = (self.M +
-                        alpha * (np.outer(delta, prevState) -
-                        regularisation*(self.M**2)*self.M)
-                        )
+            self.M = self.M + alpha * np.outer(delta, prevState)
+
+        elif highAccuracy == True:
+            delta = (prevState + np.exp(-dt/tau)*state)/2 + (tau / dt) * (self.M @ (np.exp(-dt/tau)*state - prevState))
+            self.M = self.M + alpha * np.outer(delta, prevState)
 
                 
     def STDPLearningStep(self,dt):       
@@ -487,7 +489,7 @@ class MazeAgent():
         
         if self.mazeType == 'TMaze':
             if (self.pos[0] > self.roomSize+0.05) and (self.LRDecisionPending==True):
-                if np.random.choice([0,1],p=[0.75,0.25]) == 0:
+                if np.random.choice([0,1],p=[0.66,0.34]) == 0:
                     self.dir = np.array([0,1])
                 else:
                     self.dir = np.array([0,-1])
@@ -509,6 +511,9 @@ class MazeAgent():
             self.pos[1] = max(self.pos[1],self.extent[2]+0.02)
             self.pos[1] = min(self.pos[1],self.extent[3]-0.02)
             print("Rat escaped!")
+            if self.mazeType == 'TMaze':
+                self.dir=np.array([1,0])
+                self.LRDecisionPending = True
             # plotter = Visualiser(self)
             # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
@@ -570,8 +575,8 @@ class MazeAgent():
                 # if this intercept lies on the current step and on the current wall (0 < lam_s < 1, 0 < lam_w < 1) this implies a "collision" 
                 # if it lies ahead of the current step and on the current wall (lam_s > 1, 0 < lam_w < 1) then we should "veer" away from this wall
                 # this occurs iff the solution to s1 + lam_s*(s2-s1) = w1 + lam_w*(w2 - w1) satisfies 0 <= lam_s & lam_w <= 1
-                lam_s = (np.dot(w1, dw_perp) - np.dot(s1, dw_perp)) / np.dot(ds, dw_perp)
-                lam_w = (np.dot(s1, ds_perp) - np.dot(w1, ds_perp)) / np.dot(dw, ds_perp)
+                lam_s = (np.dot(w1, dw_perp) - np.dot(s1, dw_perp)) / (np.dot(ds, dw_perp)+1e-9)
+                lam_w = (np.dot(s1, ds_perp) - np.dot(w1, ds_perp)) / (np.dot(dw, ds_perp)+1e-9)
 
                 #there are two situations we need to worry about: 
                 # • 0 < lam_s < 1 and 0 < lam_w < 1: the collision is ON the current proposed step . Do something immediately.
@@ -650,6 +655,8 @@ class MazeAgent():
         Returns:
             array: array of states. Same shape as input except final dimension has gone from 2 to nCells.
         """ 
+
+        mask = np.ones((pos.shape[:-1])) #will be used to mask out states which aren't in valid maze regions 
         if stateType == None: stateType = self.stateType
 
         if stateType == 'onehot':     
@@ -676,6 +683,20 @@ class MazeAgent():
                 dev_aroundloop = np.linalg.norm(diff_aroundloop,axis=-1)
                 dev.append(dev_aroundloop)
 
+            if (self.mazeType == 'TMaze'):
+                dev_throughleftarm  = np.linalg.norm(np.abs((centres - np.array([self.roomSize+0.05,2*self.roomSize]))),axis=-1) + np.linalg.norm(np.abs((np.array([0,self.roomSize]) - pos)),axis=-1)
+                dev_throughrightarm = np.linalg.norm(np.abs((centres - np.array([self.roomSize+0.05,0]))),axis=-1)               + np.linalg.norm(np.abs((np.array([0,self.roomSize]) - pos)),axis=-1)
+                dev_intoleftarm  = np.linalg.norm(np.abs((centres - np.array([0,self.roomSize]))),axis=-1) + np.linalg.norm(np.abs((np.array([self.roomSize+0.05,2*self.roomSize]) - pos)),axis=-1)
+                dev_intorightarm  = np.linalg.norm(np.abs((centres - np.array([0,self.roomSize]))),axis=-1) + np.linalg.norm(np.abs((np.array([self.roomSize+0.05,0]) - pos)),axis=-1)
+                dev.append(dev_throughleftarm)
+                dev.append(dev_throughrightarm)
+                dev.append(dev_intoleftarm)
+                dev.append(dev_intorightarm)
+
+                mask *= np.invert((pos[...,0]<self.roomSize)*(pos[...,1]>self.roomSize+0.05))[...,0]
+                mask *= np.invert((pos[...,0]<self.roomSize)*(pos[...,1]<self.roomSize-0.05))[...,0]
+
+
             states = np.zeros_like(dev[0])
 
             for devs in dev:
@@ -700,6 +721,9 @@ class MazeAgent():
         #normalise state 
         if normalise == True: 
             states = states / (1e-6 + np.linalg.norm(states,axis=-1)[...,np.newaxis])
+
+        #mask out states in invalid maze regions 
+        states *= mask[...,np.newaxis]
 
         return states
         
@@ -818,7 +842,7 @@ def getWalls(mazeType, roomSize=1):
                                 [[rs,0],[rs,height*rs]]])
     
     elif mazeType == 'TMaze':
-        walls['corridorIn'] = np.array([
+        walls['corridors'] = np.array([
                                 [[0,0.05+rs],[rs,0.05+rs]],
                                 [[0,-0.05+rs],[rs,-0.05+rs]],
                                 [[rs,0.05+rs],[rs,rs+rs]],
@@ -1064,7 +1088,14 @@ class Visualiser():
             # if i%10==0:
                 if textlabel==True:
                     ax.text(centre[0],centre[1],str(ids[i]),fontsize=3,horizontalalignment='center',verticalalignment='center')
-                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.1, facecolor= 'C'+str(i))
+                if self.mazeAgent.mazeType == 'TMaze':
+                    if abs(centre[1]-1)<0.001: color = 'C0'
+                    elif centre[1]>1.001: color = 'C1'
+                    elif centre[1]<0.999: color = 'C2'
+                    else: color = 'C3'
+                else:
+                    color = 'C'+str(i)
+                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.1, facecolor=color)
                 ax.add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
@@ -1095,6 +1126,13 @@ class Visualiser():
         saveFigure(anim,saveTitle=field+"Animation",anim=True)
         return anim
 
+
+# def vprint(*args):
+#     verbose = global verbose
+#     if versobe == True: 
+#         for arg in *args:
+#             print(arg)
+#     return
 
 def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
     """saves figure to file, by data (folder) and time (name) 
