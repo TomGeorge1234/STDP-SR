@@ -337,7 +337,7 @@ class MazeAgent():
         # plotter = Visualiser(self)
         # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha,highAccuracy=False):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha,highAccuracy=True):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -647,7 +647,7 @@ class MazeAgent():
         gridFields = np.maximum(0,gridFields)
         return gridFields
     
-    def posToState(self, pos, stateType=None, normalise=True): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+    def posToState(self, pos, stateType=None, normalise=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
         returns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
@@ -676,7 +676,7 @@ class MazeAgent():
             pos = np.expand_dims(pos,-2)
             diff = np.abs((centres - pos))
             dev = [np.linalg.norm(diff,axis=-1)]
-            
+        
             if (self.mazeType == 'loop') and (self.doorsClosed == False):
                 diff_aroundloop = diff.copy()
                 diff_aroundloop[..., 0] = (self.extent[1]-self.extent[0]) - diff_aroundloop[..., 0]
@@ -720,7 +720,10 @@ class MazeAgent():
 
         #normalise state 
         if normalise == True: 
-            states = states / (1e-6 + np.linalg.norm(states,axis=-1)[...,np.newaxis])
+            norms = np.linalg.norm(states,axis=-1)
+            nonzero = norms > 0 
+            states[nonzero] /= norms[nonzero][...,np.newaxis]
+
 
         #mask out states in invalid maze regions 
         states *= mask[...,np.newaxis]
