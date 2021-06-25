@@ -337,7 +337,7 @@ class MazeAgent():
         # plotter = Visualiser(self)
         # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha,highAccuracy=True):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -363,13 +363,11 @@ class MazeAgent():
             self.M[:,s_t] = self.M[:,s_t] + alpha * delta
 
         #normal TD learning 
-        elif highAccuracy == False:
-            delta = prevState + (tau / dt) * (self.M @ ((1 - dt/tau)*state - prevState))
+        else:
+            delta = (dt / (tau + dt)) * prevState + self.M @ ((tau/(tau + dt))*state - prevState)
+            deta *= tau/dt #scaling, not important 
             self.M = self.M + alpha * np.outer(delta, prevState)
 
-        elif highAccuracy == True:
-            delta = (prevState + np.exp(-dt/tau)*state)/2 + (tau / dt) * (self.M @ (np.exp(-dt/tau)*state - prevState))
-            self.M = self.M + alpha * np.outer(delta, prevState)
 
                 
     def STDPLearningStep(self,dt):       
@@ -647,7 +645,7 @@ class MazeAgent():
         gridFields = np.maximum(0,gridFields)
         return gridFields
     
-    def posToState(self, pos, stateType=None, normalise=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+    def posToState(self, pos, stateType=None, normalise=True, cheapNormalise=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
         returns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
@@ -724,6 +722,8 @@ class MazeAgent():
             nonzero = norms > 0 
             states[nonzero] /= norms[nonzero][...,np.newaxis]
 
+        if cheapNormalise == True:
+            states = states / self.nCells
 
         #mask out states in invalid maze regions 
         states *= mask[...,np.newaxis]
@@ -959,7 +959,7 @@ class Visualiser():
         return fig, ax
 
     
-    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",show=True,plotTimeStamp=False):
+    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",show=True,plotTimeStamp=False,colorbar=True):
         snapshot = self.snapshots.iloc[hist_id]
         if (ax is not None) and (fig is not None): 
             ax.clear()
@@ -973,8 +973,9 @@ class Visualiser():
         try: cax.clear()
         except: 
             pass
-        cax = divider.append_axes("right", size="5%", pad=0.1)
-        fig.colorbar(im, cax=cax)
+        if colorbar == True:
+            cax = divider.append_axes("right", size="5%", pad=0.1)
+            fig.colorbar(im, cax=cax)
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
@@ -1121,8 +1122,8 @@ class Visualiser():
             fig, ax = self.plotGridField(hist_id=0,number=number,show=False,save=False)
             anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True, False), frames=len(self.snapshots), repeat=False, interval=interval)
         elif field == 'M':
-            fig, ax = self.plotM(hist_id=0,show=False,save=False)
-            anim = FuncAnimation(fig, self.plotM, fargs=(None, fig, ax, False, "", False,True), frames=len(self.snapshots), repeat=False, interval=interval)
+            fig, ax = self.plotM(hist_id=0,show=False,save=False,colorbar=False)
+            anim = FuncAnimation(fig, self.plotM, fargs=(None, fig, ax, False, "", False,True,False), frames=len(self.snapshots), repeat=False, interval=interval)
         
         today = datetime.strftime(datetime.now(),'%y%m%d')
         now = datetime.strftime(datetime.now(),'%H%M')
