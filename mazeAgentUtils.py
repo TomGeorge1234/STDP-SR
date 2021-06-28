@@ -9,6 +9,8 @@ from datetime import datetime
 import numbers
 from pprint import pprint as pprint
 import os
+from scipy.spatial import distance_matrix
+
 
 import matplotlib
 import matplotlib.pyplot as plt 
@@ -120,7 +122,7 @@ class MazeAgent():
         #initialise history dataframes
         print("   making state/history dataframes")
         self.mazeState = {}
-        self.history = pd.DataFrame(columns = ['t','pos','color','runID','firingRate','thetaPhase']) 
+        self.history = pd.DataFrame(columns = ['t','pos','delta','color','runID','firingRate','thetaPhase']) 
         self.snapshots = pd.DataFrame(columns = ['t','M','W','mazeState'])
 
         #set pos/vel
@@ -174,7 +176,8 @@ class MazeAgent():
         if self.nCells is None: 
             ex = self.extent
             area, pcarea  = (ex[1]-ex[0])*(ex[3]-ex[2]), np.pi * ((self.sigma/2)**2)
-            self.nCells = int(20 * area / pcarea) #~10 in any given place
+            cellsPerArea = 10
+            self.nCells = int(cellsPerArea * area / pcarea) #~10 in any given place
         if self.mazeType == 'TMaze':
             self.LRDecisionPending=True
 
@@ -197,9 +200,37 @@ class MazeAgent():
                 self.centres = np.array([xcentres,ycentres]).T
                 inds = self.centres[:,0].argsort()
                 self.centres = self.centres[inds]
+                print("   checking basis cells aren't too close") 
+                min_d = 0.1/0.9
+                done = False
+                while done != True:
+                    min_d *= 0.9
+                    print("     min seperation distanc:  %.1f cm" %(min_d*100))
+                    count = 0
+                    while count <= 10:
+                        d = distance_matrix(self.centres,self.centres)
+                        d  += 0.1*np.eye(d.shape[0])
+                        d_xid, d_yid = np.where(d < min_d)
+                        print('      ',int(len(d_xid)/2),' overlapping pairs',end='\n')
+                        if len(d_xid) == 0:
+                            done = True 
+                            break
+                        to_remove = []
+                        for i in range(len(d_xid)):
+                            if d_xid[i] < d_yid[i]:
+                                to_remove.append(d_xid[i])
+                        to_remove = np.unique(to_remove)
+                        xcentres = np.random.uniform(self.extent[0],self.extent[1],len(to_remove))
+                        ycentres = np.random.uniform(self.extent[2],self.extent[3],len(to_remove))
+                        self.centres[to_remove] = np.array([xcentres,ycentres]).T
+                        count += 1
             self.M = np.eye(self.stateSize)
             # self.M = np.zeros((self.stateSize,self.stateSize))
             # self.M = np.ones((self.stateSize,self.stateSize)) / self.stateSize
+
+    
+            inds = self.centres[:,0].argsort()
+            self.centres = self.centres[inds]
         elif self.stateType == 'fourier':
             self.stateSize = self.nCells
             self.kVectors = np.random.rand(self.nCells,2) - 0.5
@@ -252,12 +283,16 @@ class MazeAgent():
 
         hist_t = np.zeros(steps)
         hist_pos = np.zeros((steps,2))
+        hist_delta = np.zeros(steps)
         hist_plotColor = np.zeros(steps).astype(str)
         hist_runID = np.zeros(steps)
         hist_firingRate = np.zeros((steps,self.nCells))
         hist_thetaPhase = np.zeros(steps)
 
-        self.toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
+        try: 
+            self.toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
+        except KeyError: 
+            pass 
         lastTDstep, distanceToTD = 0, np.random.exponential(self.TDdx) #2cm scale
         
         """Main training loop. Principally on each iteration: 
@@ -277,29 +312,34 @@ class MazeAgent():
 
                     """TD learning step"""
                     if TDSRLearn == True: 
-
+                        
                         alpha = self.alpha
                         try: alpha_ = alpha[0] * np.exp(-(i/steps)*(np.log(self.alpha[0]/self.alpha[1]))) #decaying alpha
                         except: alpha_ = self.alpha
 
+
                         if TDlearnorder == 'distance':
                             if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
                                 dtTD = self.t - hist_t[lastTDstep]
-                                self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
+                                delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
                                 lastTDstep = i 
                                 distanceToTD = np.random.exponential(self.TDdx)
                                 hist_plotColor[i] = 'r'
+                                hist_delta[i] = delta
+
 
                         elif TDlearnorder == 'decorrelated': 
                             id2 = np.random.randint(i)
                             learnDist = np.random.exponential(self.TDdx)
                             id1 = max(0,id2 - max(1,int((learnDist/self.speedScale) / self.dt)))
                             dtTD = hist_t[id2] - hist_t[id1]  
-                            self.TDLearningStep(pos=hist_pos[id2], prevPos=hist_pos[id1], dt=dtTD, tau=self.tau, alpha=alpha_)
+                            delta = self.TDLearningStep(pos=hist_pos[id2], prevPos=hist_pos[id1], dt=dtTD, tau=self.tau, alpha=alpha_)
+                            hist_delta[i] = delta
 
                         elif TDlearnorder == 'everystep':
                             dtTD = self.t - hist_t[i-1]  
-                            self.TDLearningStep(pos=self.pos, prevPos=hist_pos[i-1], dt=dtTD, tau=self.tau, alpha=alpha_)
+                            delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[i-1], dt=dtTD, tau=self.tau, alpha=alpha_)
+                            hist_delta[i] = delta
 
                 self.thetaPhase = 4*(self.t%(1/4))*2*np.pi
 
@@ -324,7 +364,7 @@ class MazeAgent():
                 break
 
         self.runID += 1
-        runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
+        runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
         self.history = self.history.append(runHistory)
         snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.M.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
@@ -336,8 +376,19 @@ class MazeAgent():
 
         # plotter = Visualiser(self)
         # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
+        delta = np.array(hist_delta)
+        time = np.array(hist_t)
+        time = time[delta!=0] / 60
+        delta = delta[delta!=0]
+        time, delta = time[::10], delta[::10]
+        smooth_delta = [np.mean(delta[max(0,i-100):min(i+100,len(delta))]) for i in range(len(delta))]
+        fig, ax = plt.subplots(figsize=(2,1))
+        ax.scatter(time,delta,s=0.5,alpha=0.5)
+        ax.scatter(time,smooth_delta,s=1,alpha=0.5,c='C2')
+        ax.set_xlabel("Time / min")
+        ax.set_ylabel("Update size")
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, reluM=True):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -359,15 +410,21 @@ class MazeAgent():
         if self.stateType == 'onehot': 
             s_t = np.argwhere(prevState)[0][0]
             s_tplus1 = np.argwhere(state)[0][0]
-            delta = state + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
-            self.M[:,s_t] = self.M[:,s_t] + alpha * delta
+            Delta = state + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
+            self.M[:,s_t] = self.M[:,s_t] + alpha * Delta
 
         #normal TD learning 
         else:
             delta = (dt / (tau + dt)) * prevState + self.M @ ((tau/(tau + dt))*state - prevState)
-            deta *= tau/dt #scaling, not important 
-            self.M = self.M + alpha * np.outer(delta, prevState)
+            # delta *= tau/dt #scaling, not important 
+            # print(np.linalg.norm(delta))
+            Delta = np.outer(delta, prevState)
+            self.M = self.M + alpha * Delta
 
+        if reluM == True: 
+            self.M = np.maximum(0,self.M)
+        
+        return np.linalg.norm(Delta)
 
                 
     def STDPLearningStep(self,dt):       
@@ -503,12 +560,12 @@ class MazeAgent():
             (self.pos[0] > self.extent[1]) or 
             (self.pos[1] < self.extent[2]) or 
             (self.pos[1] > self.extent[3])):
-            print(self.pos)
+            # print(self.pos)
             self.pos[0] = max(self.pos[0],self.extent[0]+0.02)
             self.pos[0] = min(self.pos[0],self.extent[1]-0.02)
             self.pos[1] = max(self.pos[1],self.extent[2]+0.02)
             self.pos[1] = min(self.pos[1],self.extent[3]-0.02)
-            print("Rat escaped!")
+            # print("Rat escaped!")
             if self.mazeType == 'TMaze':
                 self.dir=np.array([1,0])
                 self.LRDecisionPending = True
@@ -585,7 +642,7 @@ class MazeAgent():
                     continue
 
                 if (lam_s > 1) and (0 <= lam_w <= 1):
-                    if lam_s * stepLength <= 0.05: #if the future collision is under 3cm away
+                    if lam_s * stepLength <= 0.03: #if the future collision is under 3cm away
                         futureCollisionList[0].append(wall)
                         futureCollisionList[1].append([lam_s,lam_w])
                         continue
@@ -645,7 +702,7 @@ class MazeAgent():
         gridFields = np.maximum(0,gridFields)
         return gridFields
     
-    def posToState(self, pos, stateType=None, normalise=True, cheapNormalise=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+    def posToState(self, pos, stateType=None, normalise=False, cheapNormalise=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
         returns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
@@ -666,7 +723,7 @@ class MazeAgent():
             y_s = y_s - self.yArray
             x_s = np.argmin(np.abs(x_s),axis=-1)
             y_s = np.argmin(np.abs(y_s),axis=-1)
-            onehotcoord = y_s * len(self.yArray) + x_s
+            onehotcoord = y_s * len(self.xArray) + x_s
             states = (np.arange(self.stateSize) == onehotcoord[...,None]).astype(int)
         
         if stateType in ['gaussian','gaussianCS','gaussianThreshold','circles']:
@@ -717,15 +774,16 @@ class MazeAgent():
             states = fr 
 
         #normalise state 
-        if normalise == True: 
+        if normalise == True and self.stateType != 'onehot':  
             norms = np.linalg.norm(states,axis=-1)
-            nonzero = norms > 0 
+            nonzero = norms > 0 #normalise state l2 norm = 1 unless it's all zeros
             states[nonzero] /= norms[nonzero][...,np.newaxis]
 
         if cheapNormalise == True:
             states = states / self.nCells
 
         #mask out states in invalid maze regions 
+        states = states.astype('float')
         states *= mask[...,np.newaxis]
 
         return states
@@ -931,7 +989,7 @@ class Visualiser():
         self.snapshots = mazeAgent.snapshots
         self.history = mazeAgent.history
 
-    def plotMazeStructure(self,fig=None,ax=None,hist_id=-1):
+    def plotMazeStructure(self,fig=None,ax=None,hist_id=-1,save=False):
         snapshot = self.snapshots.iloc[hist_id]
         extent, walls = snapshot['mazeState']['extent'], snapshot['mazeState']['walls']
 
@@ -945,6 +1003,8 @@ class Visualiser():
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
+        if save == True: 
+            saveFigure(fig, 'mazeStructure')
         return fig, ax
     
     def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=1):
@@ -1025,6 +1085,7 @@ class Visualiser():
         if number == None: number = random.randint(a=0,b=self.mazeAgent.stateSize-1)
         extent = self.mazeAgent.extent
         rf = self.mazeAgent.discreteStates[..., number]
+        print(rf)
         ax.imshow(rf,extent=extent,interpolation=None)
         if show==False:
             plt.close(fig)
@@ -1045,14 +1106,18 @@ class Visualiser():
         else:
             gridFields = self.mazeAgent.getGridFields(M=M,alignToFinal=True)
 
+        def sigmoid(x):
+            return np.exp(x) / (np.exp(x) + np.exp(-x))
         if number == 'many': 
             fig = plt.figure(figsize=(10, 10*((extent[3]-extent[2])/(extent[1]-extent[0]))))
             gs = matplotlib.gridspec.GridSpec(6, 6, hspace=0.1, wspace=0.1)
             c=0
-            numberstoplot = np.concatenate((np.array([0,1,2,3,4,5]),np.geomspace(6,gridFields.shape[0]-1,30).astype(int)))
+            numberstoplot = np.array([60 + 5*i for i in np.arange(36)])
+            # numberstoplot = np.concatenate((np.array([0,1,2,3,4,5]),np.geomspace(6,gridFields.shape[0]-1,30).astype(int)))
             for i in range(6):
                 for j in range(6):
                     ax = plt.subplot(gs[i,j])
+                    # ax.imshow(sigmoid(gridFields[numberstoplot[c]]),extent=extent,interpolation=None)
                     ax.imshow(gridFields[numberstoplot[c]],extent=extent,interpolation=None)
                     ax.grid(False)
                     ax.axis('off')
