@@ -51,23 +51,13 @@ defaultParams = {
           'TDdx'               : 0.02,       #rough distance between TD learning updates, metres 
           'alpha'              : 0.01,       #TD learning rate 
           'nCells'             : None,       #how many features to use
-          'cellFiringRate'     : 10,         #peak firing rate of a cell (middle of place field, preferred theta phase)
           'centres'            : None,       #array of receptive field positions. Overwrites nCells
           'speedScale'         : 0.16,       #movement speed scale, metres/second
           'rotSpeedScale'      : None,       #rotational speed scale, radians/second
           'initPos'            : None,       #initial position [x0, y0], metres
           'initDir'            : None,       #initial direction, unit vector
           'sigma'              : 0.3,        #feature cell width scale, relevant for  gaussin, gaussianCS, circles
-          'placeCellThreshold' : 0.5,        #place cell threshold value (fraction of its maximum)
-          'gridCellThreshold'  : 0,          #grid cell threshold value (fraction of its maximum)
           'doorsClosed'        : True,       #whether doors are opened or closed in multicompartment maze
-          'tau_pre'            : 20e-3,      #rate potentiating trace decays
-          'tau_post'           : 20e-3,      #rate depressing trace decays 
-          'eta_pre'            : 0.01,       #learning rate for pre to post strengthening 
-          'eta_post'           : 0.01,       #learning rate for post to pre weakening
-          'a_pre'              : 1,          #per trace bump when cell spikes
-          'a_post'             : 0.3,        #post trace bump when cell spikes
-          'w_max'              : 20e-3       #max STDP weights
 }
 
 class MazeAgent():
@@ -135,7 +125,7 @@ class MazeAgent():
         print("   setting time/run counters")
         self.t = 0
         self.runID = 0  
-        self.thetaPhase = 4*(self.t%(1/4))*2*np.pi
+        self.thetaPhase = 10*(self.t%(1/10))*2*np.pi
 
 
         #make maze 
@@ -341,7 +331,7 @@ class MazeAgent():
                             delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[i-1], dt=dtTD, tau=self.tau, alpha=alpha_)
                             hist_delta[i] = delta
 
-                self.thetaPhase = 4*(self.t%(1/4))*2*np.pi
+                self.thetaPhase = 8*(self.t%(1/8))*2*np.pi #8Hz theta 
 
                 #update history arrays
                 hist_pos[i] = self.pos
@@ -366,7 +356,7 @@ class MazeAgent():
         self.runID += 1
         runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
         self.history = self.history.append(runHistory)
-        snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.M.copy()], 'mazeState':[self.mazeState]})
+        snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
         #find and save grid/place cells so you don't have to repeatedly calculate them when plotting 
@@ -374,21 +364,22 @@ class MazeAgent():
         self.gridFields = self.getGridFields(self.M)
         self.placeFields = self.getPlaceFields(self.M)
 
-        # plotter = Visualiser(self)
-        # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
-        delta = np.array(hist_delta)
-        time = np.array(hist_t)
-        time = time[delta!=0] / 60
-        delta = delta[delta!=0]
-        time, delta = time[::10], delta[::10]
-        smooth_delta = [np.mean(delta[max(0,i-100):min(i+100,len(delta))]) for i in range(len(delta))]
-        fig, ax = plt.subplots(figsize=(2,1))
-        ax.scatter(time,delta,s=0.5,alpha=0.5)
-        ax.scatter(time,smooth_delta,s=1,alpha=0.5,c='C2')
-        ax.set_xlabel("Time / min")
-        ax.set_ylabel("Update size")
+        if TDSRLearn == True: 
+            # plotter = Visualiser(self)
+            # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
+            delta = np.array(hist_delta)
+            time = np.array(hist_t)
+            time = time[delta!=0] / 60
+            delta = delta[delta!=0]
+            time, delta = time[::10], delta[::10]
+            smooth_delta = [np.mean(delta[max(0,i-100):min(i+100,len(delta))]) for i in range(len(delta))]
+            fig, ax = plt.subplots(figsize=(2,1))
+            ax.scatter(time,delta,s=0.5,alpha=0.5)
+            ax.scatter(time,smooth_delta,s=1,alpha=0.5,c='C2')
+            ax.set_xlabel("Time / min")
+            ax.set_ylabel("Update size")
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, reluM=True):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, reluM=False):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -437,6 +428,15 @@ class MazeAgent():
         Returns:
             float array: vector of firing rates for this time step 
         """        
+        cellFiringRate = 10         #peak firing rate of a cell (middle of place field, preferred theta phase)
+        tau_pre           = 20e-3      #rate potentiating trace decays
+        tau_post           = 20e-3      #rate depressing trace decays 
+        eta_pre         = 0.01       #learning rate for pre to post strengthening 
+        eta_post           = 0.01       #learning rate for post to pre weakening
+        a_pre           = 1        #per trace bump when cell spikes
+        a_post           = 0.3        #post trace bump when cell spikes
+        w_max           = 20e-3       #max STDP weights
+
         thetaPhase = self.thetaPhase
 
         vectorToCells = self.pos - self.centres
@@ -449,7 +449,7 @@ class MazeAgent():
 
         spike_list = []
         for cell in range(self.nCells):
-            fr = 20*currentFR[cell] + 0.5
+            fr = cellFiringRate*currentFR[cell] + 0.5
             n_spikes = np.random.poisson(fr*dt)
             if n_spikes != 0: 
                 time_of_spikes = np.random.uniform(self.t,self.t+dt,n_spikes)
@@ -462,14 +462,14 @@ class MazeAgent():
             for i in range(len(spike_list)):
                 time, cell = spike_list[i][0], int(spike_list[i][1])
                 timeDiff = time - lastSpikeTime 
-                self.postTrace = self.postTrace * np.exp(- timeDiff / self.tau_pre)
-                self.preTrace = self.preTrace * np.exp(- timeDiff / self.tau_post)
-                self.preTrace[cell] += self.a_pre
-                self.postTrace[cell] += self.a_post
+                self.postTrace = self.postTrace * np.exp(- timeDiff / tau_pre)
+                self.preTrace = self.preTrace * np.exp(- timeDiff / tau_post)
+                self.preTrace[cell] += a_pre
+                self.postTrace[cell] += a_post
                 weightsToPost = self.W[:,cell]
-                weightsToPost += (self.w_max - weightsToPost) * self.eta_pre * self.preTrace
+                weightsToPost += (w_max - weightsToPost) * eta_pre * self.preTrace
                 weightsFromPost = self.W[cell,:]
-                weightsFromPost += - weightsToPost * self.eta_post * self.postTrace
+                weightsFromPost += - weightsToPost * eta_post * self.postTrace
                 lastSpikeTime = time 
 
             self.lastSpikeTime=lastSpikeTime
@@ -670,9 +670,9 @@ class MazeAgent():
         Returns:
             array: Receptive fields of shape [nCells, nX, nY]
         """        
+        placeCellThreshold = 0.8        #place cell threshold value (fraction of its maximum)
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
-        threshold_ = self.placeCellThreshold
-        threshold = threshold_*np.amax(placeFields,axis=(1,2))[:,None,None]
+        threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
         placeFields = np.maximum(0,placeFields - threshold)
         return placeFields
 
@@ -689,9 +689,9 @@ class MazeAgent():
         """
         _, eigvecs = np.linalg.eig(M) #"v[:,i] is the eigenvector corresponding to the eigenvalue w[i]"
         eigvecs = np.real(eigvecs)
+        gridCellThreshold = 0 
         gridFields = np.einsum("ij,kli->jkl",eigvecs,self.discreteStates)
-        threshold_ = self.gridCellThreshold
-        threshold = threshold_*np.amax(gridFields,axis=(1,2))[:,None,None]
+        threshold = gridCellThreshold*np.amax(gridFields,axis=(1,2))[:,None,None]
         if alignToFinal == True:
             grids_final_flat = np.reshape(self.gridFields,(self.stateSize,-1))
             grids_flat = np.reshape(gridFields,(self.stateSize,-1))
@@ -1019,7 +1019,7 @@ class Visualiser():
         return fig, ax
 
     
-    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",show=True,plotTimeStamp=False,colorbar=True):
+    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",show=True,plotTimeStamp=False,colorbar=True,STDP=False):
         snapshot = self.snapshots.iloc[hist_id]
         if (ax is not None) and (fig is not None): 
             ax.clear()
@@ -1027,6 +1027,8 @@ class Visualiser():
             fig, ax = plt.subplots(figsize=(2,2))
         if M is None: 
             M = snapshot['M']
+            if STDP==True: 
+                M = snapshot['W'].T
         t = int(np.round(snapshot['t']))
         im = ax.imshow(M)
         divider = make_axes_locatable(ax)
@@ -1047,12 +1049,11 @@ class Visualiser():
             plt.close(fig)
         return fig, ax
 
-
     def addTimestamp(self, fig, ax, i=-1):
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True):
+    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False):
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time).abs().to_numpy().argmin()
         #if a figure/ax objects are passed, clear the axis and replot the maze
@@ -1067,6 +1068,9 @@ class Visualiser():
         
         snapshot = self.snapshots.iloc[hist_id]
         M = snapshot['M']
+        if STDP==True: 
+            M = snapshot['W'].T
+        print("using W")
         t = int(np.round(snapshot['t'] / 60))
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M)
@@ -1093,12 +1097,14 @@ class Visualiser():
         return fig, ax
     
 
-    def plotGridField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False, plotTimeStamp=False,save=True):
+    def plotGridField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False):
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
 
         snapshot = self.snapshots.iloc[hist_id]
         M = snapshot['M']
+        if STDP==True: 
+            M = snapshot['W'].T    
         t = snapshot['t'] / 60
         extent = snapshot['mazeState']['extent']
         if hist_id == -1 and animationCall == False:
@@ -1112,8 +1118,8 @@ class Visualiser():
             fig = plt.figure(figsize=(10, 10*((extent[3]-extent[2])/(extent[1]-extent[0]))))
             gs = matplotlib.gridspec.GridSpec(6, 6, hspace=0.1, wspace=0.1)
             c=0
-            numberstoplot = np.array([60 + 5*i for i in np.arange(36)])
-            # numberstoplot = np.concatenate((np.array([0,1,2,3,4,5]),np.geomspace(6,gridFields.shape[0]-1,30).astype(int)))
+            # numberstoplot = np.array([60 + 5*i for i in np.arange(36)])
+            numberstoplot = np.concatenate((np.array([0,1,2,3,4,5]),np.geomspace(6,gridFields.shape[0]-1,30).astype(int)))
             for i in range(6):
                 for j in range(6):
                     ax = plt.subplot(gs[i,j])
@@ -1146,7 +1152,7 @@ class Visualiser():
             saveFigure(fig, "gridField")
         return fig, ax
         
-    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=True):
+    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=False):
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
         centres = self.mazeAgent.centres.copy()
         ids = np.arange(len(centres))
@@ -1164,7 +1170,7 @@ class Visualiser():
                     else: color = 'C3'
                 else:
                     color = 'C'+str(i)
-                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.1, facecolor=color)
+                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.8, facecolor=color)
                 ax.add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
@@ -1194,6 +1200,22 @@ class Visualiser():
         now = datetime.strftime(datetime.now(),'%H%M')
         saveFigure(anim,saveTitle=field+"Animation",anim=True)
         return anim
+
+    def plotSTDPFiringRates(self,starttime=0,endtime=5/60):
+        firingRates = np.array(list(self.mazeAgent.history['firingRate'].to_numpy()))
+        t = self.mazeAgent.history['t'].to_numpy()
+        theta = self.mazeAgent.history['thetaPhase'].to_numpy()
+        startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
+        endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
+        fig, ax = plt.subplots(figsize=(5,1))
+        for i in range(firingRates.shape[1]):
+            ax.scatter(t[startid:endid],firingRates[startid:endid,i],s=1,alpha=0.5)
+        ax.plot(t[startid:endid],0.05*np.sin(theta[startid:endid]),linewidth=0.5,c='black')
+        ax.set_xlabel("Time / s")
+        ax.set_ylabel("Cell firing rate")
+        saveFigure(fig,"firingRate")
+        return fig, ax 
+
 
 
 # def vprint(*args):
