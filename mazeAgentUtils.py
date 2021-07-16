@@ -195,7 +195,7 @@ class MazeAgent():
                 done = False
                 while done != True:
                     min_d *= 0.9
-                    print("     min seperation distanc:  %.1f cm" %(min_d*100))
+                    print("     min seperation distance:  %.1f cm" %(min_d*100))
                     count = 0
                     while count <= 10:
                         d = distance_matrix(self.centres,self.centres)
@@ -230,7 +230,11 @@ class MazeAgent():
             self.M = np.eye(self.stateSize)
             #self.M = np.zeros((self.stateSize,self.stateSize))
         
-        self.sigmas = np.array([self.sigma]*self.nCells)
+        if hasattr(self.sigma,"__len__"):
+            if self.sigma.__len__() == self.nCells:
+                self.sigmas = self.sigma
+        else:
+            self.sigmas = np.array([self.sigma]*self.nCells)
         # self.sigmas = np.random.uniform(self.sigma/3,2*self.sigma,size=(self.nCells))
 
         #array of states, one for each discretised position coordinate 
@@ -268,7 +272,7 @@ class MazeAgent():
             TDSRLearn (bool,optional): toggles whether to do TD learning 
             STDPLearn (bool, optional): toggles whether to do STDP learning 
         """        
-
+        print(self.W)
         steps = int(trainTime * 60 / self.dt) #number of steps to perform 
 
         hist_t = np.zeros(steps)
@@ -331,7 +335,8 @@ class MazeAgent():
                             delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[i-1], dt=dtTD, tau=self.tau, alpha=alpha_)
                             hist_delta[i] = delta
 
-                self.thetaPhase = 8*(self.t%(1/8))*2*np.pi #8Hz theta 
+                self.thetaFrequency = 10
+                self.thetaPhase = self.thetaFrequency*(self.t%(1/self.thetaFrequency))*2*np.pi #8Hz theta 
 
                 #update history arrays
                 hist_pos[i] = self.pos
@@ -429,27 +434,28 @@ class MazeAgent():
             float array: vector of firing rates for this time step 
         """        
         cellFiringRate = 10         #peak firing rate of a cell (middle of place field, preferred theta phase)
-        tau_pre           = 20e-3      #rate potentiating trace decays
-        tau_post           = 20e-3      #rate depressing trace decays 
-        eta_pre         = 0.01       #learning rate for pre to post strengthening 
-        eta_post           = 0.01       #learning rate for post to pre weakening
-        a_pre           = 1        #per trace bump when cell spikes
-        a_post           = 0.3        #post trace bump when cell spikes
-        w_max           = 20e-3       #max STDP weights
+        tau_pre        = 20e-3      #rate potentiating trace decays
+        tau_post       = 20e-3      #rate depressing trace decays 
+        eta_pre        = 0.05       #learning rate for pre to post strengthening 
+        eta_post       = 0.05       #learning rate for post to pre weakening
+        a_pre          = 1        #per trace bump when cell spikes
+        a_post         = 0.3        #post trace bump when cell spikes
+        w_max          = 1       #max STDP weights
+        decayTime      = 10        
 
         thetaPhase = self.thetaPhase
 
-        vectorToCells = self.pos - self.centres
-        alongPathDistToCellCentre = (np.dot(vectorToCells,self.dir) / np.linalg.norm(self.dir))  / self.sigmas #as mutiple of sigma
-        preferedThetaPhase = np.pi - alongPathDistToCellCentre * (2/3) * np.pi
+        vectorToCells = self.vectorsToCellCentres(self.pos)
+        sigmasToCellMidline = (np.dot(vectorToCells,self.dir) / np.linalg.norm(self.dir))  / self.sigmas #as mutiple of sigma
+        preferedThetaPhase = np.pi + sigmasToCellMidline * (2/3) * np.pi
         peakFR = self.posToState(self.pos)
         sigmaTheta = np.pi/8
         phaseDiff = preferedThetaPhase - thetaPhase
         currentFR = peakFR * np.exp(-(phaseDiff)**2 / (2*sigmaTheta**2))
-
+        currentFR = cellFiringRate*currentFR + 0.5
         spike_list = []
         for cell in range(self.nCells):
-            fr = cellFiringRate*currentFR[cell] + 0.5
+            fr = currentFR[cell]
             n_spikes = np.random.poisson(fr*dt)
             if n_spikes != 0: 
                 time_of_spikes = np.random.uniform(self.t,self.t+dt,n_spikes)
@@ -470,7 +476,10 @@ class MazeAgent():
                 weightsToPost += (w_max - weightsToPost) * eta_pre * self.preTrace
                 weightsFromPost = self.W[cell,:]
                 weightsFromPost += - weightsToPost * eta_post * self.postTrace
+                weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
+                weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 lastSpikeTime = time 
+
 
             self.lastSpikeTime=lastSpikeTime
 
@@ -571,6 +580,31 @@ class MazeAgent():
                 self.LRDecisionPending = True
             # plotter = Visualiser(self)
             # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
+
+
+    def vectorsToCellCentres(self,pos):
+        """Takes a posisiton vector shape (2,) and returns an array of shape (nCells,2) of the 
+        shortest distance to all cells, taking into account loop geometry etc. 
+
+        Args:
+            pos (array): position vector shape (2,)
+
+        Returns:
+            vectorToCells (array): shape (30,2)
+        """        
+        if self.mazeType == 'loop' and self.doorsClosed == False:
+            pos_plus = pos + np.array([self.roomSize,0])
+            pos_minus = pos - np.array([self.roomSize,0])
+            positions = np.array([pos,pos_plus,pos_minus])
+            vectors = self.centres[:,np.newaxis,:] - positions[np.newaxis,:,:]
+            shortest = np.argmin(np.linalg.norm(vectors,axis=-1),axis=1)
+            shortest_vectors = np.diagonal(vectors[:,shortest,:],axis1=0,axis2=1).T
+
+        else:
+            shortest_vectors = self.centres - self.pos
+            
+
+        return shortest_vectors
 
 
     def toggleDoors(self, doorsClosed = None): #this function could be made more advanced to toggle more maze options
@@ -727,9 +761,15 @@ class MazeAgent():
             states = (np.arange(self.stateSize) == onehotcoord[...,None]).astype(int)
         
         if stateType in ['gaussian','gaussianCS','gaussianThreshold','circles']:
+            
+            vectorsToCellCentres = np.zeros(pos.shape + (self.nCells,))
+            for idx in np.ndindex(pos.shape[:-1]):
+                vectorsToCellCentres[idx] = self.vectorsToCellCentres(pos[idx]).T
+            
             centres = self.centres
             pos = np.expand_dims(pos,-2)
-            diff = np.abs((centres - pos))
+            # diff = np.abs(vectorsToCellCentres)
+            diff = np.abs((centres-pos))
             dev = [np.linalg.norm(diff,axis=-1)]
         
             if (self.mazeType == 'loop') and (self.doorsClosed == False):
@@ -1170,7 +1210,7 @@ class Visualiser():
                     else: color = 'C3'
                 else:
                     color = 'C'+str(i)
-                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.8, facecolor=color)
+                circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.5, facecolor=color)
                 ax.add_patch(circle)
         saveFigure(fig, "basis")
         return fig, ax 
@@ -1215,15 +1255,6 @@ class Visualiser():
         ax.set_ylabel("Cell firing rate")
         saveFigure(fig,"firingRate")
         return fig, ax 
-
-
-
-# def vprint(*args):
-#     verbose = global verbose
-#     if versobe == True: 
-#         for arg in *args:
-#             print(arg)
-#     return
 
 def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
     """saves figure to file, by data (folder) and time (name) 
