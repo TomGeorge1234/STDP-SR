@@ -442,11 +442,11 @@ class MazeAgent():
         eta_pre        = 0.1       #learning rate for pre to post strengthening 
         eta_post       = 0.1       #learning rate for post to pre weakening
         a_pre          = 1        #per trace bump when cell spikes
-        a_post         = 0.50        #post trace bump when cell spikes
+        a_post         = 0.90        #post trace bump when cell spikes
         w_max          = 1       #max STDP weights
         w_min          = 0
         decayTime      = 10  
-        sigmaTheta = np.pi/4
+        sigmaTheta = np.pi/3
         baseline = 0
 
         thetaPhase = self.thetaPhase
@@ -1050,7 +1050,7 @@ class Visualiser():
         return fig, ax
 
     
-    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",show=True,plotTimeStamp=False,colorbar=True,STDP=False):
+    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",title="",show=True,plotTimeStamp=False,colorbar=True,STDP=False):
         snapshot = self.snapshots.iloc[hist_id]
         if (ax is not None) and (fig is not None): 
             ax.clear()
@@ -1072,6 +1072,7 @@ class Visualiser():
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
+        ax.set_title(title)
         if save==True:
             saveFigure(fig, "M"+savename)
         if plotTimeStamp == True: 
@@ -1222,6 +1223,7 @@ class Visualiser():
         return fig, ax
 
 
+
     def animateField(self, number=0,field='place',interval=100):
         if field == 'place':
             fig, ax = self.plotPlaceField(hist_id=0,number=number,show=False,save=False)
@@ -1231,7 +1233,7 @@ class Visualiser():
             anim = FuncAnimation(fig, self.plotGridField, fargs=(None, fig, ax, number, False, True, True, False), frames=len(self.snapshots), repeat=False, interval=interval)
         elif field == 'M':
             fig, ax = self.plotM(hist_id=0,show=False,save=False,colorbar=False)
-            anim = FuncAnimation(fig, self.plotM, fargs=(None, fig, ax, False, "", False,True,False), frames=len(self.snapshots), repeat=False, interval=interval)
+            anim = FuncAnimation(fig, self.plotM, fargs=(None, fig, ax, False,"", "Synaptic Weight Matrix \n (STDP Hebbian learning)", False,False,False,True), frames=len(self.snapshots), repeat=False, interval=interval)
         
         today = datetime.strftime(datetime.now(),'%y%m%d')
         now = datetime.strftime(datetime.now(),'%H%M')

@@ -1,5 +1,6 @@
 # STDP-SR
 ## Hebbian learning approximates successor representations in hippocampus
+![](./figures/readme/animation.gif)
 
 ### Introduction 
 Successor representations (these papers by [Stachenfeld](https://www.nature.com/articles/nn.4650) and [de Cothi](https://onlinelibrary.wiley.com/doi/full/10.1002/hipo.23246) make for good prereading) are probably learnt in hippocampus to assist navigation algorithms. They store compressed information about future state occupancy, under a given policy, starting from the current state. They are mathematically well defined and they (as well as the navigation algormiths they support) explain much behavioural and anatomical evidence. Like typical `value functions' in reinforcement learning, it is usually assumed that these successor representations are learned by error-based temporal difference (TD) update steps however the implementation of this mechanism in hippocampus has not been studied extensively and is probably biologically implausible. 
