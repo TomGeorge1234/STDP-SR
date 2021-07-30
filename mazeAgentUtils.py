@@ -59,7 +59,7 @@ defaultParams = {
           'initDir'            : None,       #initial direction, unit vector
           'sigma'              : 0.3,        #feature cell width scale, relevant for  gaussin, gaussianCS, circles
           'doorsClosed'        : True,       #whether doors are opened or closed in multicompartment maze
-          'successorFeatureNorm':1000
+          'successorFeatureNorm':1000       
 }
 
 class MazeAgent():
@@ -181,6 +181,7 @@ class MazeAgent():
                 self.nCells = self.centres.shape[0]
                 self.stateSize = self.nCells
             else: #scatter some ourselves (making sure they aren't too close)
+                print(self.nCells) 
                 self.stateSize=self.nCells
                 xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
                 ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
@@ -711,7 +712,7 @@ class MazeAgent():
         
         #normalise: 
         M = M / np.diag(M)[:,np.newaxis]
-        placeCellThreshold = 0.6        #place cell threshold value (fraction of its maximum)
+        placeCellThreshold = 0.9       #place cell threshold value (fraction of its maximum)
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
         threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
         threshold = placeCellThreshold
@@ -1027,8 +1028,8 @@ class Visualiser():
         for wallObject in walls.keys():
             for wall in walls[wallObject]:
                 ax.plot([wall[0][0],wall[1][0]],[wall[0][1],wall[1][1]],color='darkgrey',linewidth=5)
-            ax.set_xlim(left=extent[0]-0.05,right=extent[1]+0.05)
-            ax.set_ylim(bottom=extent[2]-0.05,top=extent[3]+0.05)
+            # ax.set_xlim(left=extent[0]-0.05,right=extent[1]+0.05)
+            # ax.set_ylim(bottom=extent[2]-0.05,top=extent[3]+0.05)
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
@@ -1036,14 +1037,15 @@ class Visualiser():
             saveFigure(fig, 'mazeStructure')
         return fig, ax
     
-    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=1):
+    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=1,color=None):
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
         endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
         trajectory = np.stack(self.history['pos'][startid:endid])[::skiprate]
-        color = np.stack(self.history['color'][startid:endid])[::skiprate]
-        ax.scatter(trajectory[:,0],trajectory[:,1],s=0.4,alpha=0.7,c=color,zorder=2)
+        if color is None: 
+            color = np.stack(self.history['color'][startid:endid])[::skiprate]
+        ax.scatter(trajectory[:,0],trajectory[:,1],s=10,alpha=0.7,c=color,zorder=2)
         saveFigure(fig, "trajectory")
         return fig, ax
 
@@ -1259,9 +1261,9 @@ def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
     """	
 
     today =  datetime.strftime(datetime.now(),'%y%m%d')
-    if not os.path.isdir(f"./figures/{today}/"):
-        os.mkdir(f"./figures/{today}/")
-    figdir = f"./figures/{today}/"
+    if not os.path.isdir(f"../figures/{today}/"):
+        os.mkdir(f"../figures/{today}/")
+    figdir = f"../figures/{today}/"
     now = datetime.strftime(datetime.now(),'%H%M')
     path_ = f"{figdir}{saveTitle}_{now}"
     path = path_
