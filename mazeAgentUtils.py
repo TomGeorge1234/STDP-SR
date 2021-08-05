@@ -3,63 +3,82 @@ import numpy as np
 import pandas as pd 
 from tqdm.notebook import tqdm
 from matplotlib.animation import FuncAnimation
-from matplotlib import rcParams
+from matplotlib import rcParams, rc
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from datetime import datetime 
 import numbers
 from pprint import pprint as pprint
 import os
 import scipy
+from scipy.stats import vonmises
 from scipy.spatial import distance_matrix
 
 
 import matplotlib
 import matplotlib.pyplot as plt 
-plt.style.use("seaborn")
 rcParams['figure.dpi']= 400
-rcParams['axes.labelsize']=5
+rcParams['axes.labelsize']=7
 rcParams['axes.labelpad']=2
 rcParams['axes.titlepad']=3
-rcParams['axes.titlesize']=5
+rcParams['axes.titlesize']=9
 rcParams['axes.xmargin']=0
 rcParams['axes.ymargin']=0
-rcParams['xtick.labelsize']=4
-rcParams['ytick.labelsize']=4
-rcParams['grid.linewidth']=1
-rcParams['legend.fontsize']=4
+rcParams['axes.facecolor']=[1,1,1,0] 
+rcParams['xtick.labelsize']=7
+rcParams['ytick.labelsize']=7
+rcParams['grid.linewidth']=0.1
+rcParams['legend.fontsize']=7
 rcParams['lines.linewidth']=0.5
-rcParams.update({'figure.autolayout': True})
 rcParams['xtick.major.pad']=2
 rcParams['xtick.minor.pad']=2
 rcParams['ytick.major.pad']=2
 rcParams['ytick.minor.pad']=2
-rcParams['xtick.color']='grey'
-rcParams['ytick.color']='grey'
+
 rcParams['figure.titlesize']='medium'
+
 from cycler import cycler
 rcParams['axes.prop_cycle']=cycler('color', ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'])
 rcParams['image.cmap'] = 'inferno'
 
 #Default parameters for MazeAgent 
 defaultParams = { 
-          'mazeType'           : 'oneRoom',  #type of maze, define in getMaze() function
-          'stateType'          : 'gaussian', #feature on which to TD learn (onehot, gaussian, gaussianCS, fourier, circles)
-          'movementPolicy'     : 'raudies',  #movement policy (raudies, random walk, windows screensaver)
-          'roomSize'           : 1,          #maze size scaling parameter, metres
-          'dt'                 : 0.01,       #simulation time disretisation 
-          'dx'                 : 0.01,       #space discretisation (for plotting, movement is continuous)
-          'tau'                : 2,          #TD decay time, seconds
-          'TDdx'               : 0.01,       #rough distance between TD learning updates, metres 
-          'alpha'              : 0.01,       #TD learning rate 
-          'nCells'             : None,       #how many features to use
-          'centres'            : None,       #array of receptive field positions. Overwrites nCells
-          'speedScale'         : 0.16,       #movement speed scale, metres/second
-          'rotSpeedScale'      : None,       #rotational speed scale, radians/second
-          'initPos'            : None,       #initial position [x0, y0], metres
-          'initDir'            : None,       #initial direction, unit vector
-          'sigma'              : 0.3,        #feature cell width scale, relevant for  gaussin, gaussianCS, circles
-          'doorsClosed'        : True,       #whether doors are opened or closed in multicompartment maze
-          'successorFeatureNorm':100       
+
+          #Maze params 
+          'mazeType'            : 'oneRoom',  #type of maze, define in getMaze() function
+          'stateType'           : 'gaussian', #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
+          'movementPolicy'      : 'raudies',  #movement policy (raudies, random walk, windows screensaver)
+          'roomSize'            : 1,          #maze size scaling parameter, metres
+          'dt'                  : 0.01,       #simulation time disretisation 
+          'dx'                  : 0.01,       #space discretisation (for plotting, movement is continuous)
+          'speedScale'          : 0.16,       #movement speed scale, metres/second
+          'rotSpeedScale'       : None,       #rotational speed scale, radians/second
+          'initPos'             : [0.1,0.1],       #initial position [x0, y0], metres
+          'initDir'             : [1,0],       #initial direction, unit vector
+          'nCells'              : None,       #how many features to use
+          'centres'             : None,       #array of receptive field positions. Overwrites nCells
+          'sigma'               : 1,          #basis cell width scale (irrelevant for onehots)
+          'doorsClosed'         : True,       #whether doors are opened or closed in multicompartment maze
+
+          #TD params 
+          'tau'                 : 4,          #TD decay time, seconds
+          'TDdx'                : 0.01,       #rough distance between TD learning updates, metres 
+          'alpha'               : 0.01,       #TD learning rate 
+          'successorFeatureNorm': 100,        #linear scaling on successor feature definition found to improve learning stability
+
+          #STDP params
+          'a_pre'               : 1,          #bump in cell 'presynaptic trace' when it spikes
+          'a_post'              : 0.8,        #bump in cell 'postsynaptic trace' when it spikes
+          'precessFraction'     : 0.8,        #fraction of 2pi the prefered phase moves through
+          'peakFiringRate'      : 10,         #peak firing rate of a cell (middle of place field, preferred theta phase)
+          'tau_pre'             : 20e-3,      #rate potentiating trace decays
+          'tau_post'            : 20e-3,      #rate depressing trace decays 
+          'eta_pre'             : 0.1,        #learning rate for pre to post strengthening 
+          'eta_post'            : 0.1,        #learning rate for post to pre weakening
+          'weightDecayTime'     : 10,         #STDP weight decay time in seconds 
+          'sigmaTheta'          : 0.6*np.pi,  #noise in preferred theta phase for a cell 
+          'kappa'               : 2,          # von mises spread parameter
+          'baselineFiringRate'  : 0           #baseline firing rate for cells 
+
 }
 
 class MazeAgent():
@@ -119,9 +138,9 @@ class MazeAgent():
 
         #set pos/vel
         print("   initialising velocity, position and direction")
-        self.pos = self.initPos
+        self.pos = np.array(self.initPos)
         self.speed = self.speedScale
-        self.dir = self.initDir
+        self.dir = np.array(self.initDir)
 
         #time and runID
         print("   setting time/run counters")
@@ -181,7 +200,6 @@ class MazeAgent():
                 self.nCells = self.centres.shape[0]
                 self.stateSize = self.nCells
             else: #scatter some ourselves (making sure they aren't too close)
-                print(self.nCells) 
                 self.stateSize=self.nCells
                 xcentres = np.random.uniform(self.extent[0],self.extent[1],self.nCells)
                 ycentres = np.random.uniform(self.extent[2],self.extent[3],self.nCells)
@@ -218,8 +236,9 @@ class MazeAgent():
 
             #order the place cells so successor matrix has some structure:
             if self.mazeType == 'twoRooms': #from centre outwards
-                distance_to_centre = np.linalg.norm(np.array([1,0.5]) - self.centres,axis=1)
-                distance_to_centre = distance_to_centre * (2*(self.centres[:,0]>1)-1)
+                middle = np.array([self.extent[1]/2,self.extent[3]/2])
+                distance_to_centre = np.linalg.norm(middle - self.centres,axis=1)
+                distance_to_centre = distance_to_centre * (2*(self.centres[:,0]>middle[0])-1)
                 inds = distance_to_centre.argsort()
                 self.centres = self.centres[inds]
             else: #from left to right
@@ -262,8 +281,7 @@ class MazeAgent():
             plotColor=None,
             saveEvery=1,
             TDSRLearn=True,
-            STDPLearn=True,
-            TDlearnorder='distance'):
+            STDPLearn=True):
         """The main experiment call.
         A "run" consists of a period where the agent explores the maze according to the movement policy. 
         As it explores it learns, by TD, a successor representation over state vectors. 
@@ -317,27 +335,15 @@ class MazeAgent():
                         except: alpha_ = self.alpha
                         
 
-                        if TDlearnorder == 'distance':
-                            if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
-                                dtTD = self.t - hist_t[lastTDstep]
-                                delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
-                                lastTDstep = i 
-                                distanceToTD = np.random.exponential(self.TDdx)
-                                hist_plotColor[i] = 'r'
-                                hist_delta[i] = delta
-
-                        elif TDlearnorder == 'decorrelated': 
-                            id2 = np.random.randint(i)
-                            learnDist = np.random.exponential(self.TDdx)
-                            id1 = max(0,id2 - max(1,int((learnDist/self.speedScale) / self.dt)))
-                            dtTD = hist_t[id2] - hist_t[id1]  
-                            delta = self.TDLearningStep(pos=hist_pos[id2], prevPos=hist_pos[id1], dt=dtTD, tau=self.tau, alpha=alpha_)
+                        if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
+                            dtTD = self.t - hist_t[lastTDstep]
+                            delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
+                            lastTDstep = i 
+                            distanceToTD = np.random.exponential(self.TDdx)
+                            hist_plotColor[i] = 'r'
                             hist_delta[i] = delta
 
-                        elif TDlearnorder == 'everystep':
-                            dtTD = self.t - hist_t[i-1]  
-                            delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[i-1], dt=dtTD, tau=self.tau, alpha=alpha_)
-                            hist_delta[i] = delta
+
 
                 self.thetaFrequency = 10
                 self.thetaPhase = self.thetaFrequency*(self.t%(1/self.thetaFrequency))*2*np.pi #8Hz theta 
@@ -417,13 +423,8 @@ class MazeAgent():
         else:
             delta = ((tau * dt) / (tau + dt)) * self.successorFeatureNorm * prevState + self.M @ ((tau/(tau + dt))*state - prevState)
             Delta = np.outer(delta, prevState)
-            self.M = self.M + alpha * Delta - 2 * alpha * lam * self.M
+            self.M = self.M + alpha * Delta - 2 * alpha * lam * self.M #regularisation
 
-
-
-        if reluM == True: 
-            self.M = np.maximum(0,self.M)
-        
         return np.linalg.norm(Delta)
                 
     def STDPLearningStep(self,dt):       
@@ -437,29 +438,16 @@ class MazeAgent():
             float array: vector of firing rates for this time step 
         """   
 
-        cellFiringRate = 10       #peak firing rate of a cell (middle of place field, preferred theta phase)
-        tau_pre        = 20e-3      #rate potentiating trace decays
-        tau_post       = 20e-3      #rate depressing trace decays 
-        eta_pre        = 0.1       #learning rate for pre to post strengthening 
-        eta_post       = 0.1       #learning rate for post to pre weakening
-        a_pre          = 1        #per trace bump when cell spikes
-        a_post         = 0.8        #post trace bump when cell spikes
-        w_max          = 1       #max STDP weights
-        w_min          = 0
-        decayTime      = 10  
-        sigmaTheta = 0.6*np.pi
-        baseline = 0
-        precessFraction = 0.8
-
-        thetaPhase = self.thetaPhase
-
         vectorToCells = self.vectorsToCellCentres(self.pos)
         sigmasToCellMidline = (np.dot(vectorToCells,self.dir) / np.linalg.norm(self.dir))  / self.sigmas #as mutiple of sigma
-        preferedThetaPhase = np.pi + sigmasToCellMidline * precessFraction * np.pi
+        preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+
         peakFR = self.posToState(self.pos)
-        phaseDiff = preferedThetaPhase - thetaPhase
-        currentFR = peakFR * np.exp(-(phaseDiff)**2 / (2*sigmaTheta**2))
-        currentFR = cellFiringRate*currentFR + baseline
+        phaseDiff = preferedThetaPhase - self.thetaPhase
+        currentFR = peakFR * vonmises.pdf(phaseDiff,kappa=self.kappa) / scipy.stats.vonmises.pdf(0,kappa=self.kappa)
+        # phaseDiff = min(phaseDiff, phaseDiff-2*np/pi , phaseDiff+2*np/pi) #effectively turns gaussian into ~von mises
+        # currentFR = peakFR * np.exp(-(phaseDiff)**2 / (2*self.sigmaTheta**2))
+        currentFR = self.peakFiringRate*currentFR + self.baselineFiringRate
         spike_list = []
         for cell in range(self.nCells):
             fr = currentFR[cell]
@@ -475,15 +463,15 @@ class MazeAgent():
             for i in range(len(spike_list)):
                 time, cell = spike_list[i][0], int(spike_list[i][1])
                 timeDiff = time - lastSpikeTime 
-                self.postTrace = self.postTrace * np.exp(- timeDiff / tau_pre)
-                self.preTrace = self.preTrace * np.exp(- timeDiff / tau_post)
-                self.preTrace[cell] += a_pre
-                self.postTrace[cell] += a_post
+                self.postTrace = self.postTrace * np.exp(- timeDiff / self.tau_pre)
+                self.preTrace = self.preTrace * np.exp(- timeDiff / self.tau_post)
+                self.preTrace[cell] += self.a_pre
+                self.postTrace[cell] += self.a_post
                 weightsToPost = self.W[cell,:]
-                weightsToPost += eta_pre * self.preTrace
+                weightsToPost += self.eta_pre * self.preTrace
                 # weightsToPost +=  eta_pre * self.preTrace
                 weightsFromPost = self.W[:,cell]
-                weightsFromPost += - eta_post * self.postTrace
+                weightsFromPost += - self.eta_post * self.postTrace
                 # weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 lastSpikeTime = time 
@@ -784,14 +772,16 @@ class MazeAgent():
 
 
         if self.mazeType == 'twoRooms': 
-            if pos[0]<1 and pos[1]>0.4 and pos[1]<0.6:
-                cells_to_turn_off = (self.centres[:,0]>1)*np.invert((self.centres[:,1]>0.4)*(self.centres[:,1]<0.6))
-            elif pos[0]>1 and pos[1]>0.4 and pos[1]<0.6:
-                cells_to_turn_off = (self.centres[:,0]<1)*np.invert((self.centres[:,1]>0.4)*(self.centres[:,1]<0.6))
-            elif pos[0]<1 and not(pos[1]>0.4 and pos[1]<0.6):
-                cells_to_turn_off = (self.centres[:,0]>1)
-            elif pos[0]>1 and not(pos[1]>0.4 and pos[1]<0.6):
-                cells_to_turn_off = (self.centres[:,0]<1)
+            wall_x = self.walls['doors'][0][0][0]
+            wall_y1, wall_y2 = self.walls['doors'][0][0][1], self.walls['doors'][0][1][1]
+            if pos[0]<wall_x and pos[1]>wall_y1 and pos[1]<wall_y2:
+                cells_to_turn_off = (self.centres[:,0]>wall_x)*np.invert((self.centres[:,1]>wall_y1)*(self.centres[:,1]<wall_y2))
+            elif pos[0]>wall_x and pos[1]>wall_y1 and pos[1]<wall_y2:
+                cells_to_turn_off = (self.centres[:,0]<wall_x)*np.invert((self.centres[:,1]>wall_y1)*(self.centres[:,1]<wall_y2))
+            elif pos[0]<wall_x and not(pos[1]>wall_y1 and pos[1]<wall_y2):
+                cells_to_turn_off = (self.centres[:,0]>wall_x)
+            elif pos[0]>wall_x and not(pos[1]>wall_y1 and pos[1]<wall_y2):
+                cells_to_turn_off = (self.centres[:,0]<wall_x)
             turn_off_mask = np.invert(cells_to_turn_off)
 
             
@@ -840,16 +830,16 @@ def getWalls(mazeType, roomSize=1):
         walls['room1'] = np.array([
                                 [[0,0],[0,rs]],
                                 [[0,rs],[rs,rs]],
-                                [[rs,rs],[rs,0.6*rs]],
-                                [[rs,0.4*rs],[rs,0]],
+                                [[rs,rs],[rs,0.7*rs]],
+                                [[rs,0.3*rs],[rs,0]],
                                 [[rs,0],[0,0]]])
         walls['room2'] = np.array([
-                                [[rs,0],[rs,0.4*rs]],
-                                [[rs,0.6*rs],[rs,rs]],
+                                [[rs,0],[rs,0.3*rs]],
+                                [[rs,0.7*rs],[rs,rs]],
                                 [[rs,rs],[2*rs,rs]],
                                 [[2*rs,rs],[2*rs,0]],
                                 [[2*rs,0],[rs,0]]])
-        walls['doors'] = np.array([[[rs,0.4*rs],[rs,0.6*rs]]])
+        walls['doors'] = np.array([[[rs,0.3*rs],[rs,0.7*rs]]])
     elif mazeType == 'fourRooms':
         walls['room1'] = np.array([
                                 [[0,0],[0,rs]],
@@ -1024,7 +1014,6 @@ class Visualiser():
     def plotMazeStructure(self,fig=None,ax=None,hist_id=-1,save=False):
         snapshot = self.snapshots.iloc[hist_id]
         extent, walls = snapshot['mazeState']['extent'], snapshot['mazeState']['walls']
-
         if (fig, ax) == (None, None): 
             fig, ax = plt.subplots(figsize=(4*(extent[1]-extent[0]),4*(extent[3]-extent[2])))
         for wallObject in walls.keys():
@@ -1039,7 +1028,8 @@ class Visualiser():
             saveFigure(fig, 'mazeStructure')
         return fig, ax
     
-    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=1,color=None):
+    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=None,color=None):
+        skiprate = int(0.01/(self.mazeAgent.speedScale * self.mazeAgent.dt))
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
@@ -1082,21 +1072,22 @@ class Visualiser():
         # if np.min(M)/np.min(M_colormatch) > np.max(M)/np.max(M_colormatch):
             # M *= np.min(M_colormatch)/np.min(M)
         # else:
-        print(M)
         M_ = M.copy()
         np.fill_diagonal(M_,0)
         non_diag_max = np.max(M_)
         non_diag_kind_max = np.mean(M_[M_>0.9*non_diag_max])
         M *= np.max(M_colormatch)/non_diag_kind_max
 
-        im = ax.imshow(M,cmap='inferno',vmin=np.min(M_colormatch),vmax=np.max(M_colormatch))
+        im = ax.imshow(M,cmap='viridis',vmin=np.min(M_colormatch),vmax=np.max(M_colormatch))
         divider = make_axes_locatable(ax)
         try: cax.clear()
         except: 
             pass
         if colorbar == True:
             cax = divider.append_axes("right", size="5%", pad=0.05)
-            fig.colorbar(im, cax=cax, ticks=[0])
+            cb = fig.colorbar(im, cax=cax, ticks=[0])
+            cb.outline.set_visible(False)
+
         ax.set_aspect('equal')
         ax.grid(False)
         ax.axis('off')
@@ -1107,7 +1098,7 @@ class Visualiser():
             ax.text(100, 5,"%g s"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
         if show==False:
             plt.close(fig)
-        return fig, ax
+        return fig, ax, cax
 
     def addTimestamp(self, fig, ax, i=-1):
         t = self.mazeAgent.saveHist[i]['t']
@@ -1211,7 +1202,7 @@ class Visualiser():
             saveFigure(fig, "gridField")
         return fig, ax
         
-    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=False,centresOnly=False):
+    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=False,centresOnly=False,onepink=False):
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
         centres = self.mazeAgent.centres.copy()
         ids = np.arange(len(centres))
@@ -1221,7 +1212,7 @@ class Visualiser():
         for (i, centre) in enumerate(centres):
             # if i%10==0:
                 if textlabel==True:
-                    ax.text(centre[0],centre[1],str(ids[i]),fontsize=3,horizontalalignment='center',verticalalignment='center')
+                    ax.text(centre[0],centre[1],str(ids[i]),fontsize=15,horizontalalignment='center',verticalalignment='center')
                 if self.mazeAgent.mazeType == 'TMaze':
                     if abs(centre[1]-1)<0.001: color = 'C0'
                     elif centre[1]>1.001: color = 'C1'
@@ -1230,9 +1221,17 @@ class Visualiser():
                 else:
                     color = 'C'+str(i)
                 if centresOnly == True: 
-                    if i == 30: c = 'C1'
-                    else: c = 'C0'
-                    ax.scatter(centre[0],centre[1],marker='x',s=120,color=c,linewidth=3.5,edgecolors='darkgrey')
+                    c='C2'
+                    if onepink == True:
+                        if i == 30:
+                            if self.mazeAgent.mazeType == 'twoRooms':
+                                centre = np.array([3,1.1])
+                                c = 'C3'
+                    if self.mazeAgent.mazeType == 'twoRooms': 
+                        s = 400; linewidth = 9
+                    else: 
+                        s = 130; linewidth = 4
+                    ax.scatter(centre[0],centre[1],marker='x',s=s,color=c,linewidth=linewidth,edgecolors='darkgrey')
                 else:
                     circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.5, facecolor=color)
                     ax.add_patch(circle)
@@ -1302,32 +1301,50 @@ class Visualiser():
                 x[i] = x[i] - self.mazeAgent.extent[1]
 
         roll = int(self.mazeAgent.nCells/2)
-        fig, ax = plt.subplots(figsize=(2,1))
-        ax.plot(x,M_av,c='C0',label=r"$\langle \mathsf{M}_{ij} \rangle $")
-        ax.plot(np.delete(x,roll),np.delete(W_av,roll),c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $")
-        ax.fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
-        ax.fill_between(np.delete(x,roll),np.delete(W_av+W_std,roll),np.delete(W_av-W_std,roll),facecolor='C1',alpha=0.5)
-        ax.legend()
-        ax.set_xlabel(r" $  x_{i} - x_{j}  $ / m")
-        ax.set_yticks([0])
-        # ax.set_facecolor('white')
-        ax.spines['left'].set_position('zero')
-        ax.spines['left'].set_color('grey')
-        ax.spines['right'].set_color('none')
-        ax.spines['bottom'].set_position('zero')
-        ax.spines['bottom'].set_color('grey')
-        ax.spines['top'].set_color('none')
 
+
+        fig, ax = plt.subplots(2,1,figsize=(3,2))
+        ax[0].plot(x,M_av,c='C0',label=r"$\langle \mathsf{M}_{ij} \rangle $",linewidth=2)
+        ax[1].plot(np.delete(x,roll),np.delete(W_av,roll),c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
+        ax[0].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
+        ax[1].fill_between(np.delete(x,roll),np.delete(W_av+W_std,roll),np.delete(W_av-W_std,roll),facecolor='C1',alpha=0.5)
+        ax[1].set_xlabel("$  x_{i} - x_{j}  $ / m")
+        ax[0].set_yticks([])
+        ax[1].set_yticks([])
+        ax[0].set_xlim(min(x),max(x))
+        ax[1].set_xlim(min(x),max(x))
+        plt.grid(False)
+
+        ax[0].spines['left'].set_position('zero')
+        ax[0].spines['left'].set_color('k')
+        ax[0].spines['right'].set_color('none')        
+        ax[0].spines['bottom'].set_position('zero')
+        ax[0].spines['bottom'].set_color('k')
+        ax[0].spines['top'].set_color('none')
+
+        ax[1].spines['left'].set_position('zero')
+        ax[1].spines['left'].set_color('k')
+        ax[1].spines['right'].set_color('none')        
+        ax[1].spines['bottom'].set_position('zero')
+        ax[1].spines['bottom'].set_color('k')
+        ax[1].spines['top'].set_color('none')
+
+        ax[1].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        ax[1].xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(0.2))
+
+        ax[0].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        ax[0].xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(0.2))
+
+        ax[1].xaxis.get_major_ticks()[int(len(ax[1].xaxis.get_major_ticks())/2)].set_visible(False)
+        ax[0].set_xticklabels(['']*6)
 
         saveFigure(fig,'M_averaged')
-
-
-
+    
         return fig, ax 
 
 
 
-def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
+def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False,specialLocation=None):
     """saves figure to file, by data (folder) and time (name) 
     Args:
         fig (matplotlib fig object): the figure to be saved
@@ -1351,6 +1368,10 @@ def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False):
         fig.save(path + ".mp4")
     else:
         fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
+    
+    if specialLocation is not None: 
+        fig.savefig(specialLocation, dpi=400,tight_layout=False,transparent=transparent)
+
     return path
 
 
