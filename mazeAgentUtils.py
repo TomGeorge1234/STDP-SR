@@ -9,6 +9,7 @@ from datetime import datetime
 import numbers
 from pprint import pprint as pprint
 import os
+import pickle
 import scipy
 from scipy.stats import vonmises
 from scipy.spatial import distance_matrix
@@ -52,12 +53,13 @@ defaultParams = {
           'dx'                  : 0.01,       #space discretisation (for plotting, movement is continuous)
           'speedScale'          : 0.16,       #movement speed scale, metres/second
           'rotSpeedScale'       : None,       #rotational speed scale, radians/second
-          'initPos'             : [0.1,0.1],       #initial position [x0, y0], metres
-          'initDir'             : [1,0],       #initial direction, unit vector
+          'initPos'             : [0.1,0.1],  #initial position [x0, y0], metres
+          'initDir'             : [1,0],      #initial direction, unit vector
           'nCells'              : None,       #how many features to use
           'centres'             : None,       #array of receptive field positions. Overwrites nCells
           'sigma'               : 1,          #basis cell width scale (irrelevant for onehots)
           'doorsClosed'         : True,       #whether doors are opened or closed in multicompartment maze
+          'reorderCells'        : True,       #whether to reorde the cell centres which have been provided
 
           #TD params 
           'tau'                 : 4,          #TD decay time, seconds
@@ -184,7 +186,7 @@ class MazeAgent():
                 self.rotSpeedScale = np.pi
             else: 
                 self.rotSpeedScale = 3*np.pi
-        if self.nCells is None: 
+        if (self.nCells is None) and (self.centres is None): 
             ex = self.extent
             area, pcarea  = (ex[1]-ex[0])*(ex[3]-ex[2]), np.pi * ((self.sigma/2)**2)
             cellsPerArea = 10
@@ -234,16 +236,18 @@ class MazeAgent():
             self.W = self.M.copy()
 
 
+
             #order the place cells so successor matrix has some structure:
-            if self.mazeType == 'twoRooms': #from centre outwards
-                middle = np.array([self.extent[1]/2,self.extent[3]/2])
-                distance_to_centre = np.linalg.norm(middle - self.centres,axis=1)
-                distance_to_centre = distance_to_centre * (2*(self.centres[:,0]>middle[0])-1)
-                inds = distance_to_centre.argsort()
-                self.centres = self.centres[inds]
-            else: #from left to right
-                inds = self.centres[:,0].argsort()
-                self.centres = self.centres[inds]
+            if self.reorderCells==True:
+                if self.mazeType == 'twoRooms': #from centre outwards
+                    middle = np.array([self.extent[1]/2,self.extent[3]/2])
+                    distance_to_centre = np.linalg.norm(middle - self.centres,axis=1)
+                    distance_to_centre = distance_to_centre * (2*(self.centres[:,0]>middle[0])-1)
+                    inds = distance_to_centre.argsort()
+                    self.centres = self.centres[inds]
+                else: #from left to right
+                    inds = self.centres[:,0].argsort()
+                    self.centres = self.centres[inds]
 
         elif self.stateType == 'fourier':
             self.stateSize = self.nCells
@@ -271,7 +275,6 @@ class MazeAgent():
 
         #STDP stuff
         print("   initialising STDP weight matrix and traces")
-        self.W = np.zeros_like(self.M)
         self.postTrace = np.zeros(self.nCells) #causes depression 
         self.preTrace = np.zeros(self.nCells) #causes potentiation
         self.lastSpikeTime = -10
@@ -463,15 +466,14 @@ class MazeAgent():
             for i in range(len(spike_list)):
                 time, cell = spike_list[i][0], int(spike_list[i][1])
                 timeDiff = time - lastSpikeTime 
-                self.postTrace = self.postTrace * np.exp(- timeDiff / self.tau_pre)
+                self.postTrace = self.postTrace * np.exp(- timeDiff / self.tau_pre) #traces for all cells decay...
                 self.preTrace = self.preTrace * np.exp(- timeDiff / self.tau_post)
-                self.preTrace[cell] += self.a_pre
-                self.postTrace[cell] += self.a_post
                 weightsToPost = self.W[cell,:]
                 weightsToPost += self.eta_pre * self.preTrace
-                # weightsToPost +=  eta_pre * self.preTrace
                 weightsFromPost = self.W[:,cell]
                 weightsFromPost += - self.eta_post * self.postTrace
+                self.preTrace[cell] += self.a_pre #...except the ones which actually just fired 
+                self.postTrace[cell] += self.a_post
                 # weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 lastSpikeTime = time 
@@ -701,10 +703,10 @@ class MazeAgent():
             M = self.M
         
         #normalise: 
-        M = M / np.diag(M)[:,np.newaxis]
-        placeCellThreshold = 0.9       #place cell threshold value (fraction of its maximum)
+        # M = M / np.diag(M)[:,np.newaxis]
+        placeCellThreshold = 0.9      #place cell threshold value (fraction of its maximum)
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
-        threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
+        # threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
         threshold = placeCellThreshold
         placeFields = np.maximum(0,placeFields - threshold)
         return placeFields
@@ -809,6 +811,9 @@ class MazeAgent():
             states[idx] = self.posToState(pos = positionArray[idx],stateType = stateType)
         
         return states
+    
+    def save(self, name="", folder="../savedObjects/"):
+        pickle.dump(self, )
         
 def getWalls(mazeType, roomSize=1):
     """Stores and returns dictionaries containing all the walls of a maze
@@ -1028,8 +1033,8 @@ class Visualiser():
             saveFigure(fig, 'mazeStructure')
         return fig, ax
     
-    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,skiprate=None,color=None):
-        skiprate = int(0.01/(self.mazeAgent.speedScale * self.mazeAgent.dt))
+    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,color=None):
+        skiprate = int(0.015/(self.mazeAgent.speedScale * self.mazeAgent.dt))
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
@@ -1052,11 +1057,6 @@ class Visualiser():
             M = snapshot['M']
             if STDP==True: 
                 M = snapshot['W']
-                for i in range(len(M)):
-                    if i == len(M)-1: 
-                        M[i,i] = (M[i,i-1]+M[i,0])/2
-                    else:
-                        M[i,i] = (M[i,i-1]+M[i,i+1])/2
 
         t = int(np.round(snapshot['t']))
         most_positive = np.max(M)
@@ -1073,7 +1073,7 @@ class Visualiser():
             # M *= np.min(M_colormatch)/np.min(M)
         # else:
         M_ = M.copy()
-        np.fill_diagonal(M_,0)
+        # np.fill_diagonal(M_,0)
         non_diag_max = np.max(M_)
         non_diag_kind_max = np.mean(M_[M_>0.9*non_diag_max])
         M *= np.max(M_colormatch)/non_diag_kind_max
@@ -1105,8 +1105,9 @@ class Visualiser():
         ax.text(x=0, y=0, t="%.2f" %t)
 
     def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False):
+        #time in minutes
         if time is not None: 
-            hist_id = self.snapshots['t'].sub(time).abs().to_numpy().argmin()
+            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
         #if a figure/ax objects are passed, clear the axis and replot the maze
         if (ax is not None) and (fig is not None): 
             ax.clear()
@@ -1120,8 +1121,7 @@ class Visualiser():
         snapshot = self.snapshots.iloc[hist_id]
         M = snapshot['M']
         if STDP==True: 
-            M = snapshot['W'].T
-            print("using W")
+            M = snapshot['W']
         t = int(np.round(snapshot['t'] / 60))
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M)
@@ -1202,7 +1202,7 @@ class Visualiser():
             saveFigure(fig, "gridField")
         return fig, ax
         
-    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=False,centresOnly=False,onepink=False):
+    def plotFeatureCells(self, hist_id=-1,textlabel=True,shufflebeforeplot=False,centresOnly=False,onepink=False,threetypes=False):
         fig, ax = self.plotMazeStructure(hist_id=hist_id)
         centres = self.mazeAgent.centres.copy()
         ids = np.arange(len(centres))
@@ -1221,6 +1221,7 @@ class Visualiser():
                 else:
                     color = 'C'+str(i)
                 if centresOnly == True: 
+                    alpha=1
                     c='C2'
                     if onepink == True:
                         if i == 30:
@@ -1231,7 +1232,18 @@ class Visualiser():
                         s = 400; linewidth = 9
                     else: 
                         s = 130; linewidth = 4
-                    ax.scatter(centre[0],centre[1],marker='x',s=s,color=c,linewidth=linewidth,edgecolors='darkgrey')
+                    if threetypes==True: 
+                        alpha=0.7
+                        if i%3 == 0:
+                            centre -= [0.02,-0.03]
+                            c='C0'
+                        elif i%3 == 1:
+                            c='C1'
+                        elif i%3 == 2:
+                            centre += [0.02,-0.03]
+                            c='C3'
+
+                    ax.scatter(centre[0],centre[1],marker='x',s=s,color=c,linewidth=linewidth,edgecolors='darkgrey',alpha=alpha)
                 else:
                     circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.5, facecolor=color)
                     ax.add_patch(circle)
@@ -1265,6 +1277,7 @@ class Visualiser():
         now = datetime.strftime(datetime.now(),'%H%M')
         saveFigure(anim,saveTitle=field+"Animation",anim=True)
         return anim
+
 
     def plotSTDPFiringRates(self,starttime=0,endtime=5/60):
         firingRates = np.array(list(self.mazeAgent.history['firingRate'].to_numpy()))
@@ -1305,9 +1318,11 @@ class Visualiser():
 
         fig, ax = plt.subplots(2,1,figsize=(3,2))
         ax[0].plot(x,M_av,c='C0',label=r"$\langle \mathsf{M}_{ij} \rangle $",linewidth=2)
-        ax[1].plot(np.delete(x,roll),np.delete(W_av,roll),c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
+        # ax[1].plot(np.delete(x,roll),np.delete(W_av,roll),c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
+        ax[1].plot(x,W_av,c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
         ax[0].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
-        ax[1].fill_between(np.delete(x,roll),np.delete(W_av+W_std,roll),np.delete(W_av-W_std,roll),facecolor='C1',alpha=0.5)
+        # ax[1].fill_between(np.delete(x,roll),np.delete(W_av+W_std,roll),np.delete(W_av-W_std,roll),facecolor='C1',alpha=0.5)
+        ax[1].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.5)
         ax[1].set_xlabel("$  x_{i} - x_{j}  $ / m")
         ax[0].set_yticks([])
         ax[1].set_yticks([])
@@ -1375,3 +1390,28 @@ def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False,sp
     return path
 
 
+def pickleAndSave(class_,name,saveDir='../savedObjects/'):
+	"""pickles and saves a class
+	this is not an efficient way to save the data, but it is easy 
+	use carefully with reservoir and Reservoireservoirair clases as these can get HUGE (~gigabytes)
+	this will overwrite previous saves without warning
+	Args:
+		class_ (any class): the class/model to save
+		name (str): the name to save it under 
+		saveDir (str, optional): Directory to save into. Defaults to './savedItems/'.
+	"""	
+	with open(saveDir + name+'.pkl', 'wb') as output:
+		pickle.dump(class_, output, pickle.HIGHEST_PROTOCOL)
+	return 
+
+def loadAndDepickle(name, saveDir='../savedObjects/'):
+	"""Loads and depickles a class saved using pickleAndSave
+	Args:
+		name (str): name it was saved as
+		saveDir (str, optional): Directory it was saved in. Defaults to './savedItems/'.
+	Returns:
+		class: the class/model
+	"""	
+	with open(saveDir + name+'.pkl', 'rb') as input:
+		item = pickle.load(input)
+	return item
