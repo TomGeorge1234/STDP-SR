@@ -233,7 +233,7 @@ class MazeAgent():
                         self.centres[to_remove] = np.array([xcentres,ycentres]).T
                         count += 1
             self.M = np.eye(self.stateSize)
-            self.W = self.M.copy()
+            self.W = self.M.copy() / self.nCells
 
 
 
