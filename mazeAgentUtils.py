@@ -34,7 +34,6 @@ rcParams['xtick.major.pad']=2
 rcParams['xtick.minor.pad']=2
 rcParams['ytick.major.pad']=2
 rcParams['ytick.minor.pad']=2
-
 rcParams['figure.titlesize']='medium'
 
 from cycler import cycler
@@ -60,6 +59,8 @@ defaultParams = {
           'sigma'               : 1,          #basis cell width scale (irrelevant for onehots)
           'doorsClosed'         : True,       #whether doors are opened or closed in multicompartment maze
           'reorderCells'        : True,       #whether to reorde the cell centres which have been provided
+          'firingRateLookUp'    : False,      #use quantised lookup table for firing rates 
+          'biasDoorCross'       : False,      #if True, in twoRoom maze door crossings are biased towards 
 
           #TD params 
           'tau'                 : 4,          #TD decay time, seconds
@@ -80,6 +81,7 @@ defaultParams = {
           'sigmaTheta'          : 0.6*np.pi,  #noise in preferred theta phase for a cell 
           'kappa'               : 2,          # von mises spread parameter
           'baselineFiringRate'  : 0           #baseline firing rate for cells 
+
 
 }
 
@@ -154,10 +156,18 @@ class MazeAgent():
         #make maze 
         print("   making the maze walls")
         self.walls = getWalls(mazeType=self.mazeType, roomSize=self.roomSize)
-        self.mazeState['walls'] = self.walls
+        walls = self.walls.copy()
+        if self.doorsClosed == False: 
+            del walls['doors']
+            self.mazeState['walls'] = walls
+        elif self.doorsClosed == True: 
+            self.mazeState['walls'] = walls
 
         #extent, xArray, yArray, discreteCoords
         print("   discretising position for later plotting")
+        if abs((self.roomSize / self.dx) - round(self.roomSize / self.dx)) > 0.00001:
+            print("      dx must be an integer fraction of room size, setting it to %.4f, %g along room length" %(self.roomSize / round(self.roomSize / self.dx), round(self.roomSize / self.dx)))
+            self.dx = self.roomSize / round(self.roomSize / self.dx)
         minx, maxx, miny, maxy = 0, 0, 0, 0
         for room in self.walls:
             wa = self.walls[room]
@@ -193,6 +203,7 @@ class MazeAgent():
             self.nCells = int(cellsPerArea * area / pcarea) #~10 in any given place
         if self.mazeType == 'TMaze':
             self.LRDecisionPending=True
+        self.doorPassage = False
 
         #initialise basis cells and M (successor matrix)
         print("   initialising basis features for learning")
@@ -266,10 +277,11 @@ class MazeAgent():
 
         #array of states, one for each discretised position coordinate 
         print("   calculating state vector at all discretised positions")
-        self.discreteStates = self.positionArray_to_stateArray(self.discreteCoords,stateType=self.stateType) #an array of discretised position coords over entire map extent 
-        
+        self.statesAlreadyInitialised = False
+        self.discreteStates = self.positionArray_to_stateArray(self.discreteCoords,stateType=self.stateType,verbose=True) #an array of discretised position coords over entire map extent 
+        self.statesAlreadyInitialised = True
+
         #store time zero snapshot
-        self.toggleDoors(self.doorsClosed)
         snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
@@ -308,10 +320,6 @@ class MazeAgent():
         hist_firingRate = np.zeros((steps,self.nCells))
         hist_thetaPhase = np.zeros(steps)
 
-        try: 
-            self.toggleDoors(self.doorsClosed) #confirm doors are open/closed if they should be 
-        except KeyError: 
-            pass 
         lastTDstep, distanceToTD = 0, np.random.exponential(self.TDdx) #2cm scale
         
         """Main training loop. Principally on each iteration: 
@@ -493,10 +501,32 @@ class MazeAgent():
             This is done by function self.checkWallIntercepts()
             What it does with this info (bounce off wall, turn to follow wall, etc.) depends on policy. 
         """
+
         dt = np.random.uniform(self.dt-0.01*self.dt,self.dt+0.01*self.dt)
         self.t += dt
         proposedNewPos = self.pos + self.speed * self.dir * dt
         proposedStep = np.array([self.pos,proposedNewPos])
+
+        if self.biasDoorCross == True: 
+            #if agent crosses into door zone there's a 75% change it 'crosses into the other room'
+            #this is done by setting agents direction in the right direction and not changing it again until after it's crossed
+            if self.doorPassage == False:
+                #if step cross into door region
+                if (np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > 0.5) and (np.linalg.norm(proposedNewPos - np.array([self.roomSize,self.roomSize/2])) < 0.5) and (abs(self.pos[0] - self.roomSize) > 0.01):
+                    if np.random.uniform(0,1) > 0.75: #start a doorPassage
+                        self.doorPassage = True
+                        self.dir = np.array([self.roomSize,self.roomSize/2]) - proposedNewPos
+                        self.dir = self.dir / np.linalg.norm(self.dir)
+                        self.pos = proposedNewPos
+                        return
+                    else: #ignore this 
+                        pass
+            if self.doorPassage == True: 
+                self.pos = proposedNewPos
+                if np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > 0.5:
+                    self.doorPassage = False
+                return
+            
         checkResult = self.checkWallIntercepts(proposedStep)
         if self.movementPolicy == 'randomWalk':
             if checkResult[0] != 'collisionNow': 
@@ -578,9 +608,9 @@ class MazeAgent():
             # plotter = Visualiser(self)
             # plotter.plotTrajectory(starttime=(self.t/60)-0.2, endtime=self.t/60)
 
-    def vectorsToCellCentres(self,pos):
+    def vectorsToCellCentres(self,pos,distance=False):
         """Takes a posisiton vector shape (2,) and returns an array of shape (nCells,2) of the 
-        shortest distance to all cells, taking into account loop geometry etc. 
+        shortest vector path to all cells, taking into account loop geometry etc. 
 
         Args:
             pos (array): position vector shape (2,)
@@ -599,8 +629,45 @@ class MazeAgent():
         else:
             shortest_vectors = self.centres - self.pos
             
-
         return shortest_vectors
+
+    def distanceToCellCentres(self, pos):
+        """Calculates distance to cell centres. 
+           In the case of the two room maze, this distance is the shortest feasible walk carefully accounting for doorways etc. 
+        Args:
+            pos (no.array): The position to calculate the distances from 
+
+        Returns:
+            np.array: (nCells,) array of distances
+        """         
+
+        if self.mazeType == 'twoRooms': 
+            distances = np.zeros(self.nCells)
+            wall_x = self.walls['doors'][0][0][0]
+            wall_y1, wall_y2 = self.walls['doors'][0][0][1], self.walls['doors'][0][1][1]
+            for i in range(self.nCells):
+                vec = np.array(pos - self.centres[i])
+                if ((self.centres[i][0] < wall_x) and (pos[0] < wall_x)) or ((self.centres[i][0] > wall_x) and (pos[0] > wall_x)):
+                    distances[i] = np.linalg.norm(vec)
+                else: #cell and position in different rooms 
+                    if self.doorsClosed == True:
+                        distances[i] = 100*self.roomSize 
+                        print(doorsClosed)
+                    else:
+                        step = np.array([pos,self.centres[i]])
+                        if self.checkWallIntercepts(step)[0] == 'collisionNow':
+                            pastBottomWall = np.linalg.norm(np.array([wall_x,wall_y1]) - pos) + np.linalg.norm(np.array([wall_x,wall_y1]) - self.centres[i])
+                            pastTopWall = np.linalg.norm(np.array([wall_x,wall_y2]) - pos) + np.linalg.norm(np.array([wall_x,wall_y2]) - self.centres[i])
+                            distances[i] = min(pastBottomWall,pastTopWall)
+                        else: 
+                            distances[i] = np.linalg.norm(vec)
+
+        else: 
+            shortest_vector = self.vectorsToCellCentres(pos)
+            distances = np.linalg.norm(shortest_vector,axis=1)
+
+        return distances
+
 
     def toggleDoors(self, doorsClosed = None): #this function could be made more advanced to toggle more maze options
         """Opens or closes door and updates mazeState
@@ -689,7 +756,7 @@ class MazeAgent():
         else:
             return ('noImmediateCollision',None)
 
-    def getPlaceFields(self, M=None):
+    def getPlaceFields(self, M=None, threshold=None):
         """Calculates receptive fiels of all place cells 
             There is one place cell for each feature cell. 
             A place cell (as  in de Cothi 2020) is defined as a thresholded linear combination of feature cells
@@ -704,7 +771,10 @@ class MazeAgent():
         
         #normalise: 
         # M = M / np.diag(M)[:,np.newaxis]
-        placeCellThreshold = 0.9      #place cell threshold value (fraction of its maximum)
+        if threshold is None: 
+            placeCellThreshold =  0.9  #place cell threshold value (fraction of its maximum)
+        else: 
+            placeCellThreshold =  threshold
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
         # threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
         threshold = placeCellThreshold
@@ -737,68 +807,55 @@ class MazeAgent():
         gridFields = np.maximum(0,gridFields)
         return gridFields
     
-    def posToState(self, pos, stateType=None, normalise=True, cheapNormalise=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
-        pos = np.array(pos)
+    def posToState(self, pos, stateType=None, normalise=True, cheapNormalise=False,initialisingCells=False): #pos is an [n1, n2, n3, ...., 2] array of 2D positions
+        
+        if (self.statesAlreadyInitialised == False) or (self.firingRateLookUp == False):
+            #calculates the firing rate of all cells 
+            pos = np.array(pos)
+            if stateType == None: stateType = self.stateType
+        
+            vector_to_cells = self.centres - pos
+            distance_to_cells = [np.linalg.norm(vector_to_cells,axis=1)]
+            closest_cell_ID = np.argmin(distance_to_cells)
 
-        if stateType == None: stateType = self.stateType
-    
-        vector_to_cells = self.centres - pos
-        distance_to_cells = [np.linalg.norm(vector_to_cells,axis=1)]
-        closest_cell_ID = np.argmin(distance_to_cells)
-
-        if (self.mazeType == 'loop') and (self.doorsClosed == False):
-            distance_to_cells.append(np.linalg.norm(self.centres - pos + [self.extent[1],0],axis=1))
-            distance_to_cells.append(np.linalg.norm(self.centres - pos - [self.extent[1],0],axis=1))
+            if (self.mazeType == 'loop') and (self.doorsClosed == False):
+                distance_to_cells.append(np.linalg.norm(self.centres - pos + [self.extent[1],0],axis=1))
+                distance_to_cells.append(np.linalg.norm(self.centres - pos - [self.extent[1],0],axis=1))
             
-        if stateType == 'onehot':
-            state = np.zeros(self.nCells)
-            state[closest_cell_ID] = 1
-        
-        if stateType == 'gaussianThreshold':
-            state = np.zeros(self.nCells)
-            for distance in distance_to_cells: 
-                state += np.maximum(np.exp(-distance**2 / (2*(self.sigmas**2))) - np.exp(-1/2) , 0) / (1-np.exp(-1/2))
-        
-        if stateType == 'gaussian':
-            state = np.zeros(self.nCells)
-            for distance in distance_to_cells: 
-                state += np.exp(-distance**2 / (2*(self.sigmas**2)))
+            if (self.mazeType == 'twoRooms'): 
+                distance_to_cells = [self.distanceToCellCentres(pos)]
 
-        if stateType == 'bump':
-            state = np.zeros(self.nCells)
-            for distance in distance_to_cells:
-                state[distance<self.sigmas] += np.e * np.exp(-1/(1-(distance/self.sigmas)**2))[distance<self.sigmas]
-                state[distance>=self.sigmas] += 0
-            # state += 0.2
-
-
-
-        if self.mazeType == 'twoRooms': 
-            wall_x = self.walls['doors'][0][0][0]
-            wall_y1, wall_y2 = self.walls['doors'][0][0][1], self.walls['doors'][0][1][1]
-            if pos[0]<wall_x and pos[1]>wall_y1 and pos[1]<wall_y2:
-                cells_to_turn_off = (self.centres[:,0]>wall_x)*np.invert((self.centres[:,1]>wall_y1)*(self.centres[:,1]<wall_y2))
-            elif pos[0]>wall_x and pos[1]>wall_y1 and pos[1]<wall_y2:
-                cells_to_turn_off = (self.centres[:,0]<wall_x)*np.invert((self.centres[:,1]>wall_y1)*(self.centres[:,1]<wall_y2))
-            elif pos[0]<wall_x and not(pos[1]>wall_y1 and pos[1]<wall_y2):
-                cells_to_turn_off = (self.centres[:,0]>wall_x)
-            elif pos[0]>wall_x and not(pos[1]>wall_y1 and pos[1]<wall_y2):
-                cells_to_turn_off = (self.centres[:,0]<wall_x)
-            turn_off_mask = np.invert(cells_to_turn_off)
-
+            if stateType == 'onehot':
+                state = np.zeros(self.nCells)
+                state[closest_cell_ID] = 1
             
-            # if self.mazeType == 'twoRooms':
-            #     turn_off_mask = np.ones(self.nCells)
-            #     for i in range(len(self.centres)):
-            #         line_of_sight_info = self.checkWallIntercepts(np.array([pos,self.centres[i]]))
-            #         if line_of_sight_info[0] == 'collisionNow': 
-            #             turn_off_mask[i] = 0 
-            state *= turn_off_mask 
+            if stateType == 'gaussianThreshold':
+                state = np.zeros(self.nCells)
+                for distance in distance_to_cells: 
+                    state += np.maximum(np.exp(-distance**2 / (2*(self.sigmas**2))) - np.exp(-1/2) , 0) / (1-np.exp(-1/2))
+            
+            if stateType == 'gaussian':
+                state = np.zeros(self.nCells)
+                for distance in distance_to_cells: 
+                    state += np.exp(-distance**2 / (2*(self.sigmas**2)))
+
+            if stateType == 'bump':
+                state = np.zeros(self.nCells)
+                for distance in distance_to_cells:
+                    state[distance<self.sigmas] += np.e * np.exp(-1/(1-(distance/self.sigmas)**2))[distance<self.sigmas]
+                    state[distance>=self.sigmas] += 0
         
+        else:
+            #uses look up table to rapidly pull out the firing rates without having to recalculate them 
+
+            closestQuantisedArea = np.unravel_index(np.argmin(np.linalg.norm(self.discreteCoords - pos,axis=-1)),self.discreteCoords.shape[:-1])
+            state = self.discreteStates[closestQuantisedArea]
+
+
         return state
 
 
-    def positionArray_to_stateArray(self, positionArray, stateType=None): 
+    def positionArray_to_stateArray(self, positionArray, stateType=None,verbose=False): 
         """Takes an array of 2D positions of size (n1, n2, n3, ..., 2)
         returns the state vector for each of these positions of size (n1, n2, n3, ..., N) where N is the size of the state vector
         Args:
@@ -807,13 +864,15 @@ class MazeAgent():
         """        
         if stateType == None: stateType = self.stateType
         states = np.zeros(positionArray.shape[:-1] + (self.nCells,))
-        for idx in np.ndindex(positionArray.shape[:-1]):
-            states[idx] = self.posToState(pos = positionArray[idx],stateType = stateType)
-        
+        if verbose == False:
+            for idx in np.ndindex(positionArray.shape[:-1]):
+                states[idx] = self.posToState(pos = positionArray[idx],stateType = stateType)
+        else: 
+            for idx in tqdm(np.ndindex(positionArray.shape[:-1]),total=int(positionArray.size/2)):
+                states[idx] = self.posToState(pos = positionArray[idx],stateType = stateType)
+
         return states
     
-    def save(self, name="", folder="../savedObjects/"):
-        pickle.dump(self, )
         
 def getWalls(mazeType, roomSize=1):
     """Stores and returns dictionaries containing all the walls of a maze
@@ -835,16 +894,16 @@ def getWalls(mazeType, roomSize=1):
         walls['room1'] = np.array([
                                 [[0,0],[0,rs]],
                                 [[0,rs],[rs,rs]],
-                                [[rs,rs],[rs,0.7*rs]],
-                                [[rs,0.3*rs],[rs,0]],
+                                [[rs,rs],[rs,0.6*rs]],
+                                [[rs,0.4*rs],[rs,0]],
                                 [[rs,0],[0,0]]])
         walls['room2'] = np.array([
-                                [[rs,0],[rs,0.3*rs]],
-                                [[rs,0.7*rs],[rs,rs]],
+                                [[rs,0],[rs,0.4*rs]],
+                                [[rs,0.6*rs],[rs,rs]],
                                 [[rs,rs],[2*rs,rs]],
                                 [[2*rs,rs],[2*rs,0]],
                                 [[2*rs,0],[rs,0]]])
-        walls['doors'] = np.array([[[rs,0.3*rs],[rs,0.7*rs]]])
+        walls['doors'] = np.array([[[rs,0.4*rs],[rs,0.6*rs]]])
     elif mazeType == 'fourRooms':
         walls['room1'] = np.array([
                                 [[0,0],[0,rs]],
@@ -1098,13 +1157,17 @@ class Visualiser():
             ax.text(100, 5,"%g s"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
         if show==False:
             plt.close(fig)
-        return fig, ax, cax
+        
+        try:
+            return fig, ax, cb, cax
+        except:
+            return fig, ax 
 
     def addTimestamp(self, fig, ax, i=-1):
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False):
+    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None):
         #time in minutes
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
@@ -1124,7 +1187,7 @@ class Visualiser():
             M = snapshot['W']
         t = int(np.round(snapshot['t'] / 60))
         extent = snapshot['mazeState']['extent']
-        placeFields = self.mazeAgent.getPlaceFields(M=M)
+        placeFields = self.mazeAgent.getPlaceFields(M=M,threshold=threshold)
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
         if plotTimeStamp == True: 
             ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
@@ -1222,7 +1285,7 @@ class Visualiser():
                     color = 'C'+str(i)
                 if centresOnly == True: 
                     alpha=1
-                    c='C2'
+                    c='darkgrey'
                     if onepink == True:
                         if i == 30:
                             if self.mazeAgent.mazeType == 'twoRooms':
@@ -1317,41 +1380,42 @@ class Visualiser():
 
 
         fig, ax = plt.subplots(2,1,figsize=(3,2))
-        ax[0].plot(x,M_av,c='C0',label=r"$\langle \mathsf{M}_{ij} \rangle $",linewidth=2)
+        ax[1].plot(x,M_av,c='C0',label=r"$\langle \mathsf{M}_{ij} \rangle $",linewidth=2)
         # ax[1].plot(np.delete(x,roll),np.delete(W_av,roll),c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
-        ax[1].plot(x,W_av,c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
-        ax[0].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
+        ax[0].plot(x,W_av,c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
+        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
         # ax[1].fill_between(np.delete(x,roll),np.delete(W_av+W_std,roll),np.delete(W_av-W_std,roll),facecolor='C1',alpha=0.5)
-        ax[1].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.5)
-        ax[1].set_xlabel("$  x_{i} - x_{j}  $ / m")
+        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.5)
         ax[0].set_yticks([])
         ax[1].set_yticks([])
         ax[0].set_xlim(min(x),max(x))
         ax[1].set_xlim(min(x),max(x))
+        ax[0].set_xticks([-2,-1,0,1,2])
+        ax[0].set_xticklabels(['','','','',''])
+        ax[1].set_xticks([-2,-1,0,1,2])
+        ax[1].set_xticklabels(['','','','',''])
+        ax[0].tick_params(width=2,color='darkgrey')
+        ax[1].tick_params(width=2,color='darkgrey')
         plt.grid(False)
 
         ax[0].spines['left'].set_position('zero')
-        ax[0].spines['left'].set_color('k')
+        ax[0].spines['left'].set_color('darkgrey')
+        ax[0].spines['left'].set_linewidth(2)
         ax[0].spines['right'].set_color('none')        
         ax[0].spines['bottom'].set_position('zero')
-        ax[0].spines['bottom'].set_color('k')
+        ax[0].spines['bottom'].set_color('darkgrey')
+        ax[0].spines['bottom'].set_linewidth(2)
         ax[0].spines['top'].set_color('none')
 
         ax[1].spines['left'].set_position('zero')
-        ax[1].spines['left'].set_color('k')
+        ax[1].spines['left'].set_color('darkgrey')
+        ax[1].spines['left'].set_linewidth(2)
         ax[1].spines['right'].set_color('none')        
         ax[1].spines['bottom'].set_position('zero')
-        ax[1].spines['bottom'].set_color('k')
+        ax[1].spines['bottom'].set_color('darkgrey')
+        ax[1].spines['bottom'].set_linewidth(2)
         ax[1].spines['top'].set_color('none')
 
-        ax[1].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
-        ax[1].xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(0.2))
-
-        ax[0].xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
-        ax[0].xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(0.2))
-
-        ax[1].xaxis.get_major_ticks()[int(len(ax[1].xaxis.get_major_ticks())/2)].set_visible(False)
-        ax[0].set_xticklabels(['']*6)
 
         saveFigure(fig,'M_averaged')
     
