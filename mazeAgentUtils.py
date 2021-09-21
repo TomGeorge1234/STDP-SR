@@ -60,28 +60,24 @@ defaultParams = {
           'doorsClosed'         : True,       #whether doors are opened or closed in multicompartment maze
           'reorderCells'        : True,       #whether to reorde the cell centres which have been provided
           'firingRateLookUp'    : False,      #use quantised lookup table for firing rates 
-          'biasDoorCross'       : False,      #if True, in twoRoom maze door crossings are biased towards 
+          'biasDoorCross'       : False,      #if True, in twoRoom maze door crossings are biased towards
+          'learnAllMatrices'    : False,      #if True learns [STDP,TD] x [theta, notheta] = all four. Other wise just STDPtheta and TDnotheta 
 
           #TD params 
-          'tau'                 : 4,          #TD decay time, seconds
+          'tau'                 : 2,          #TD decay time, seconds
           'TDdx'                : 0.01,       #rough distance between TD learning updates, metres 
           'alpha'               : 0.01,       #TD learning rate 
           'successorFeatureNorm': 100,        #linear scaling on successor feature definition found to improve learning stability
 
           #STDP params
-          'a_pre'               : 1,          #bump in cell 'presynaptic trace' when it spikes
-          'a_post'              : 0.8,        #bump in cell 'postsynaptic trace' when it spikes
-          'precessFraction'     : 0.8,        #fraction of 2pi the prefered phase moves through
-          'peakFiringRate'      : 10,         #peak firing rate of a cell (middle of place field, preferred theta phase)
-          'tau_pre'             : 20e-3,      #rate potentiating trace decays
-          'tau_post'            : 20e-3,      #rate depressing trace decays 
-          'eta_pre'             : 0.1,        #learning rate for pre to post strengthening 
-          'eta_post'            : 0.1,        #learning rate for post to pre weakening
-          'weightDecayTime'     : 10,         #STDP weight decay time in seconds 
-          'sigmaTheta'          : 0.6*np.pi,  #noise in preferred theta phase for a cell 
-          'kappa'               : 2,          # von mises spread parameter
+          'precessFraction'     : 0.7,        #fraction of 2pi the prefered phase moves through
+          'peakFiringRate'      : 20,         #peak firing rate of a cell (middle of place field, preferred theta phase)
+          'postpreAsymmetry'    : 0.8,        #depressionStrength = postpreAsymmetry * potentiationStrength 
+          'tau_STDP'            : 30e-3,      #rate trace decays
+          'eta'                 : 0.01,        #learning rate for pre to post strengthening 
+          'weightDecayTime'     : 20,         #STDP weight decay time in seconds 
+          'kappa'               : 1,          # von mises spread parameter
           'baselineFiringRate'  : 0           #baseline firing rate for cells 
-
 
 }
 
@@ -118,6 +114,7 @@ class MazeAgent():
 
         print("Initialising")
         self.initialise()
+        print("DONE")
 
     def updateParams(self,
                      params : dict):        
@@ -246,6 +243,9 @@ class MazeAgent():
             self.M = np.eye(self.stateSize)
             self.W = self.M.copy() / self.nCells
 
+            self.M_theta = self.M.copy()
+            self.W_notheta = self.W.copy()
+
 
 
             #order the place cells so successor matrix has some structure:
@@ -287,8 +287,8 @@ class MazeAgent():
 
         #STDP stuff
         print("   initialising STDP weight matrix and traces")
-        self.postTrace = np.zeros(self.nCells) #causes depression 
-        self.preTrace = np.zeros(self.nCells) #causes potentiation
+        self.trace = np.zeros(self.nCells) #causes depression 
+        self.trace_notheta = np.zeros(self.nCells) #causes depression 
         self.lastSpikeTime = -10
 
     def runRat(self,
@@ -327,7 +327,8 @@ class MazeAgent():
             • often does TD learning step
 
             • sometimes saves snapshot"""
-        for i in tqdm(range(steps)): #main training loop 
+        for i in tqdm(range(steps)): #main training loop
+
             try:
                 #update pos, velocity, direction and time according to movement policy
                 self.movementPolicyUpdate()
@@ -336,8 +337,11 @@ class MazeAgent():
                     # print(self.pos)
                     """STDP learning step"""
                     if (STDPLearn == True) and (self.stateType in  ['bump','gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
-                            hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+                        hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+                        if self.learnAllMatrices == True:
+                            _ = self.STDPLearningStep(dt = self.t - hist_t[i-1],thetaModulation=False)
 
+                            
                     """TD learning step"""
                     if TDSRLearn == True: 
                         
@@ -349,6 +353,8 @@ class MazeAgent():
                         if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
                             dtTD = self.t - hist_t[lastTDstep]
                             delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
+                            if self.learnAllMatrices == True:
+                                _ = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_, thetaModulation=True)
                             lastTDstep = i 
                             distanceToTD = np.random.exponential(self.TDdx)
                             hist_plotColor[i] = 'r'
@@ -405,7 +411,7 @@ class MazeAgent():
             ax.set_xlabel("Time / min")
             ax.set_ylabel("Update size")
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, reluM=False, lam=0.01):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, reluM=False, lam=0.01, thetaModulation=False):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -420,25 +426,33 @@ class MazeAgent():
             mask (bool or str): whether to mask TM update to update only cells near current location
             asynchronus (bool): update cells asynchronusly (like hopfield)
         """
-        state = self.posToState(pos,stateType=self.stateType) 
-        prevState = self.posToState(prevPos,stateType=self.stateType) 
+        if thetaModulation == False:
+            state = self.posToState(pos,stateType=self.stateType) 
+            prevState = self.posToState(prevPos,stateType=self.stateType) 
+            M = self.M
+
+        elif thetaModulation == True:
+            state = self.thetaModulation(self.posToState(pos,stateType=self.stateType))
+            prevState = self.thetaModulation(self.posToState(prevPos,stateType=self.stateType))
+            M = self.M_theta
+        
 
         #onehot optimised TD learning 
         if self.stateType == 'onehot': 
             s_t = np.argwhere(prevState)[0][0]
             s_tplus1 = np.argwhere(state)[0][0]
-            Delta = state + (tau / dt) * ((1 - dt/tau) * self.M[:,s_tplus1] - self.M[:,s_t])
-            self.M[:,s_t] = self.M[:,s_t] + alpha * Delta - 2 * alpha * lam * self.M[:,s_t]
+            Delta = state + (tau / dt) * ((1 - dt/tau) * M[:,s_tplus1] - M[:,s_t])
+            M[:,s_t] += alpha * Delta - 2 * alpha * lam * M[:,s_t]
 
         #normal TD learning 
         else:
-            delta = ((tau * dt) / (tau + dt)) * self.successorFeatureNorm * prevState + self.M @ ((tau/(tau + dt))*state - prevState)
+            delta = ((tau * dt) / (tau + dt)) * self.successorFeatureNorm * prevState + M @ ((tau/(tau + dt))*state - prevState)
             Delta = np.outer(delta, prevState)
-            self.M = self.M + alpha * Delta - 2 * alpha * lam * self.M #regularisation
+            M += alpha * Delta - 2 * alpha * lam * M #regularisation
 
         return np.linalg.norm(Delta)
-                
-    def STDPLearningStep(self,dt):       
+        
+    def STDPLearningStep(self,dt,thetaModulation=True):       
         """Takes the curent theta phase and estimate firing rates for all basis cells according to a simple theta sweep model. 
            From here it samples spikes and performs STDP learning on a weight matrix.
 
@@ -449,19 +463,21 @@ class MazeAgent():
             float array: vector of firing rates for this time step 
         """   
 
-        vectorToCells = self.vectorsToCellCentres(self.pos)
-        sigmasToCellMidline = (np.dot(vectorToCells,self.dir) / np.linalg.norm(self.dir))  / self.sigmas #as mutiple of sigma
-        preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+        if thetaModulation==False: #if you want to turn off theta 
+            firingRate = self.posToState(self.pos)
+            W = self.W_notheta
+            trace = self.trace_notheta
 
-        peakFR = self.posToState(self.pos)
-        phaseDiff = preferedThetaPhase - self.thetaPhase
-        currentFR = peakFR * vonmises.pdf(phaseDiff,kappa=self.kappa) / scipy.stats.vonmises.pdf(0,kappa=self.kappa)
-        # phaseDiff = min(phaseDiff, phaseDiff-2*np/pi , phaseDiff+2*np/pi) #effectively turns gaussian into ~von mises
-        # currentFR = peakFR * np.exp(-(phaseDiff)**2 / (2*self.sigmaTheta**2))
-        currentFR = self.peakFiringRate*currentFR + self.baselineFiringRate
+        if thetaModulation==True: #it usually will be
+            firingRate = self.thetaModulation(self.posToState(self.pos)) #phase precession modulates spatially dependent firing rate 
+            W = self.W
+            trace = self.trace
+
+        
+        firingRate = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
         spike_list = []
         for cell in range(self.nCells):
-            fr = currentFR[cell]
+            fr = firingRate[cell]
             n_spikes = np.random.poisson(fr*dt)
             if n_spikes != 0: 
                 time_of_spikes = np.random.uniform(self.t,self.t+dt,n_spikes)
@@ -474,14 +490,10 @@ class MazeAgent():
             for i in range(len(spike_list)):
                 time, cell = spike_list[i][0], int(spike_list[i][1])
                 timeDiff = time - lastSpikeTime 
-                self.postTrace = self.postTrace * np.exp(- timeDiff / self.tau_pre) #traces for all cells decay...
-                self.preTrace = self.preTrace * np.exp(- timeDiff / self.tau_post)
-                weightsToPost = self.W[cell,:]
-                weightsToPost += self.eta_pre * self.preTrace
-                weightsFromPost = self.W[:,cell]
-                weightsFromPost += - self.eta_post * self.postTrace
-                self.preTrace[cell] += self.a_pre #...except the ones which actually just fired 
-                self.postTrace[cell] += self.a_post
+                trace *= np.exp(- timeDiff / self.tau_STDP) #traces for all cells decay...
+                W[cell,:] += self.eta * trace #weights to postsynaptic neuron (should increase when post fires)
+                W[:,cell] -= self.eta * trace * self.postpreAsymmetry #weights to presynaptic neuron (should decrease when post fires) 
+                trace[cell] += 1 #update trace 
                 # weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 lastSpikeTime = time 
@@ -489,7 +501,31 @@ class MazeAgent():
 
             self.lastSpikeTime=lastSpikeTime
 
-        return currentFR
+        return firingRate
+
+    
+    def thetaModulation(self, firingRate, position=None, direction=None):
+        """Takes a firing rate vector and modulates it to account for theta phase precession
+
+        Args:
+            firingRate (np.array): The raw (position dependent) firing rate vector to be modulated 
+            position (np.array(2,), optional): The agent position. Defaults to None.
+            direction (np.array(2,), optional): The agent direction. Defaults to None.
+        """        
+        if position is None:
+            position = self.pos
+        if direction is None:
+            direction = self.dir
+
+        vectorToCells = self.vectorsToCellCentres(position)
+        sigmasToCellMidline = (np.dot(vectorToCells,direction) / np.linalg.norm(direction))  / self.sigmas #as mutiple of sigma
+        preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+
+        phaseDiff = preferedThetaPhase - self.thetaPhase
+        modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) / scipy.stats.vonmises.pdf(0,kappa=self.kappa)
+
+        return modulatedFiringRate
+        
 
     def movementPolicyUpdate(self):
         """Movement policy update. 
@@ -510,10 +546,11 @@ class MazeAgent():
         if self.biasDoorCross == True: 
             #if agent crosses into door zone there's a 75% change it 'crosses into the other room'
             #this is done by setting agents direction in the right direction and not changing it again until after it's crossed
+            doorRegionSize = 1
             if self.doorPassage == False:
                 #if step cross into door region
-                if (np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > 0.5) and (np.linalg.norm(proposedNewPos - np.array([self.roomSize,self.roomSize/2])) < 0.5) and (abs(self.pos[0] - self.roomSize) > 0.01):
-                    if np.random.uniform(0,1) > 0.75: #start a doorPassage
+                if (np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > doorRegionSize) and (np.linalg.norm(proposedNewPos - np.array([self.roomSize,self.roomSize/2])) < doorRegionSize) and (abs(self.pos[0] - self.roomSize) > 0.01):
+                    if np.random.uniform(0,1) < 0.9: #start a doorPassage
                         self.doorPassage = True
                         self.dir = np.array([self.roomSize,self.roomSize/2]) - proposedNewPos
                         self.dir = self.dir / np.linalg.norm(self.dir)
@@ -523,7 +560,7 @@ class MazeAgent():
                         pass
             if self.doorPassage == True: 
                 self.pos = proposedNewPos
-                if np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > 0.5:
+                if np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > doorRegionSize:
                     self.doorPassage = False
                 return
             
@@ -776,8 +813,8 @@ class MazeAgent():
         else: 
             placeCellThreshold =  threshold
         placeFields = np.einsum("ij,klj->ikl",M,self.discreteStates)
-        # threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
-        threshold = placeCellThreshold
+        threshold = placeCellThreshold*np.amax(placeFields,axis=(1,2))[:,None,None]
+        # threshold = placeCellThreshold
         placeFields = np.maximum(0,placeFields - threshold)
         return placeFields
 
@@ -833,17 +870,20 @@ class MazeAgent():
                 state = np.zeros(self.nCells)
                 for distance in distance_to_cells: 
                     state += np.maximum(np.exp(-distance**2 / (2*(self.sigmas**2))) - np.exp(-1/2) , 0) / (1-np.exp(-1/2))
-            
+                    # state = state / (self.sigmas) #normalises so same no. spikes emitted for all cell sizes
+
             if stateType == 'gaussian':
                 state = np.zeros(self.nCells)
                 for distance in distance_to_cells: 
                     state += np.exp(-distance**2 / (2*(self.sigmas**2)))
+                    state = state/self.sigmas
 
             if stateType == 'bump':
                 state = np.zeros(self.nCells)
                 for distance in distance_to_cells:
                     state[distance<self.sigmas] += np.e * np.exp(-1/(1-(distance/self.sigmas)**2))[distance<self.sigmas]
                     state[distance>=self.sigmas] += 0
+                    state = state/self.sigmas
         
         else:
             #uses look up table to rapidly pull out the firing rates without having to recalculate them 
@@ -1106,16 +1146,18 @@ class Visualiser():
         return fig, ax
 
     
-    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",title="",show=True,plotTimeStamp=False,colorbar=True,STDP=False,colormatchto='TD_M'):
+    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",title="",show=True,plotTimeStamp=False,colorbar=True,whichM='M',colormatchto='TD_M'):
         snapshot = self.snapshots.iloc[hist_id]
         if (ax is not None) and (fig is not None): 
             ax.clear()
         else:
             fig, ax = plt.subplots(figsize=(2,2))
-        if M is None: 
-            M = snapshot['M']
-            if STDP==True: 
-                M = snapshot['W']
+        if M is None:
+            if whichM == 'M': M = snapshot['M']
+            elif whichM == 'W': M = snapshot['W']
+            elif whichM == 'M_theta': M = self.mazeAgent.M_theta
+            elif whichM == 'W_notheta': M = self.mazeAgent.W_notheta
+
 
         t = int(np.round(snapshot['t']))
         most_positive = np.max(M)
@@ -1167,7 +1209,7 @@ class Visualiser():
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None):
+    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse=False):
         #time in minutes
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
@@ -1189,6 +1231,12 @@ class Visualiser():
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M,threshold=threshold)
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
+
+        if fitEllipse == True: 
+            (X,Y,Z) = self.fitEllipse(placeFields[number])
+            ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
+
+
         if plotTimeStamp == True: 
             ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
         if show==False:
@@ -1197,13 +1245,17 @@ class Visualiser():
             saveFigure(fig, "placeField")
         return fig, ax
     
-    def plotReceptiveField(self, number=None, hist_id=-1, fig=None, ax=None, show=True):
+
+    def plotReceptiveField(self, number=None, hist_id=-1, fig=None, ax=None, show=True, fitEllipse=False):
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         if number == None: number = np.random.randint(0,self.mazeAgent.nCells-1)
         extent = self.mazeAgent.extent
         rf = self.mazeAgent.discreteStates[..., number]
         ax.imshow(rf,extent=extent,interpolation=None)
+        if fitEllipse == True: 
+            (X,Y,Z) = self.fitEllipse(rf)
+            ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
         if show==False:
             plt.close(fig)
         saveFigure(fig, "receptiveField")
@@ -1420,6 +1472,24 @@ class Visualiser():
         saveFigure(fig,'M_averaged')
     
         return fig, ax 
+    
+    def fitEllipse(self,image, threshold=0.75):
+        im = np.maximum(image - np.max(image)*threshold,0)
+        gradgrad = np.linalg.norm(np.array(np.gradient(np.linalg.norm(np.array(np.gradient(im)),axis=0))),axis=0)
+        boundary = np.maximum(gradgrad-np.max(gradgrad)*0.2,0)>0
+        coords = self.mazeAgent.discreteCoords
+        coords, boundary = coords.reshape(-1,2), boundary.reshape(-1)
+        coords = coords[boundary]
+        x, y = coords[:,0],coords[:,1]
+        X = np.stack((x**2,x*y,y**2,x,y)).T
+        Y = np.ones(X.shape[0])
+        W = np.matmul(np.linalg.inv(np.matmul(X.T,X)),np.matmul(X.T,Y)) #least squares fit ellipse Ax2 + Bxy + Cy2 + Dx + Ey = 1
+        x_coord = np.linspace(self.mazeAgent.extent[0],self.mazeAgent.extent[1],1000)
+        y_coord = np.linspace(self.mazeAgent.extent[2],self.mazeAgent.extent[3],1000)   
+        X_coord, Y_coord = np.meshgrid(x_coord, y_coord)
+        Z_coord = W[0] * X_coord ** 2 + W[1] * X_coord * Y_coord + W[2] * Y_coord**2 + W[3] * X_coord + W[4] * Y_coord 
+        return (X_coord, Y_coord, Z_coord)
+
 
 
 
