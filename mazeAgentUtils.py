@@ -74,7 +74,7 @@ defaultParams = {
           'peakFiringRate'      : 20,         #peak firing rate of a cell (middle of place field, preferred theta phase)
           'postpreAsymmetry'    : 0.8,        #depressionStrength = postpreAsymmetry * potentiationStrength 
           'tau_STDP'            : 30e-3,      #rate trace decays
-          'eta'                 : 0.01,        #learning rate for pre to post strengthening 
+          'eta'                 : 0.1,        #learning rate for pre to post strengthening 
           'weightDecayTime'     : 20,         #STDP weight decay time in seconds 
           'kappa'               : 1,          # von mises spread parameter
           'baselineFiringRate'  : 0           #baseline firing rate for cells 
@@ -1413,14 +1413,25 @@ class Visualiser():
         # only works/defined for open loop maze
         M = self.mazeAgent.M
         W = self.mazeAgent.W
+        M_theta = self.mazeAgent.M_theta
+        W_notheta = self.mazeAgent.W_notheta
         roll = int(self.mazeAgent.nCells/2)
-        M_copy, W_copy = M.copy(), W.copy()
+        M_copy, W_copy, M_theta_copy, W_notheta_copy = M.copy(), W.copy(), M_theta.copy(), W_notheta.copy()
         for i in range(self.mazeAgent.nCells):
             M_copy[i,:] = np.roll(M[i,:],-i+roll)
             W_copy[i,:] = np.roll(W[i,:],-i+roll)
+            M_theta_copy[i,:] = np.roll(M_theta[i,:],-i+roll)
+            W_notheta_copy[i,:] = np.roll(W_notheta[i,:],-i+roll)
+
         M_av,M_std = np.mean(M_copy,axis=0),np.std(M_copy,axis=0)
         W_av,W_std = np.mean(W_copy,axis=0),np.std(W_copy,axis=0)
-        W_av,W_std = W_av/(np.max(np.delete(W_av,roll))/np.max(M_av)), W_std/(np.max(np.delete(W_av,roll))/np.max(M_av))
+        M_theta_av,M_theta_std = np.mean(M_theta_copy,axis=0),np.std(M_theta_copy,axis=0)
+        W_notheta_av,W_notheta_std = np.mean(W_notheta_copy,axis=0),np.std(W_notheta_copy,axis=0)
+       
+        M_av,M_std = M_av/(np.max(M_av)), M_std/(np.max(M_av))
+        W_av,W_std = W_av/(np.max(W_av)), W_std/(np.max(W_av))
+        M_theta_av,M_theta_std = M_theta_av/(np.max(M_theta_av)), M_theta_std/(np.max(M_theta_av))
+        W_notheta_av,W_notheta_std = W_notheta_av/(np.max(W_notheta_av)), W_notheta_std/(np.max(W_notheta_av))
         x = self.mazeAgent.centres[:,0]
         x = x-x[roll]
 
@@ -1432,11 +1443,17 @@ class Visualiser():
 
 
         fig, ax = plt.subplots(2,1,figsize=(3,2))
-        ax[1].plot(x,M_av,c='C0',label=r"$\langle \mathsf{M}_{ij} \rangle $",linewidth=2)
-        # ax[1].plot(np.delete(x,roll),np.delete(W_av,roll),c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
-        ax[0].plot(x,W_av,c='C1',label=r"$\langle \mathsf{W}_{ij} \rangle $",linewidth=2)
+
+        ax[1].plot(x,M_av,c='C0',linewidth=2)
+        ax[0].plot(x,W_av,label=r"$\theta$",c='C1',linewidth=2)
+        # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
+        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.5,linestyle='dotted')
+
+        comparison = comparisonMetrics(W_av,M_av,x)
+        print("theta:", comparison)
+        print("no theta:", comparisonMetrics(W_notheta_av,M_av,x))
+
         ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
-        # ax[1].fill_between(np.delete(x,roll),np.delete(W_av+W_std,roll),np.delete(W_av-W_std,roll),facecolor='C1',alpha=0.5)
         ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.5)
         ax[0].set_yticks([])
         ax[1].set_yticks([])
@@ -1468,10 +1485,12 @@ class Visualiser():
         ax[1].spines['bottom'].set_linewidth(2)
         ax[1].spines['top'].set_color('none')
 
+        ax[0].legend(frameon=False)
+
 
         saveFigure(fig,'M_averaged')
     
-        return fig, ax 
+        return fig, ax, comparison
     
     def fitEllipse(self,image, threshold=0.75):
         im = np.maximum(image - np.max(image)*threshold,0)
@@ -1549,3 +1568,21 @@ def loadAndDepickle(name, saveDir='../savedObjects/'):
 	with open(saveDir + name+'.pkl', 'rb') as input:
 		item = pickle.load(input)
 	return item
+
+def comparisonMetrics(y1,y2,x=None):
+    """Returns tuple of comparison metrics between two curves
+
+    Args:
+        y1 (predicted curve): prediction / curve to be compared
+        y2 (np.array()): true / ground true curve to be compared to 
+        x (np.array, optional): support. Defaults to None and ten to np.arange(len(y1)).
+    """  
+    if x is None: x = np.arange(len(y1))
+
+    R2 = ((1/len(y1)) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
+    skill = 1 - ( (np.sum((y1-y2)**2)) / (np.std(y2)**2) )**(1/2) 
+    area = np.trapz(y = np.abs(y1 - y2), x=x) / np.trapz(y = np.abs(y2), x=x)
+    L2 = np.linalg.norm(y1 - y2) / np.linalg.norm(y2)
+
+    return (R2, skill, area, L2)
+
