@@ -5,9 +5,10 @@ from mazeAgentUtils import *
 print("tester")
 
 k = float(sys.argv[1])
-t = float(sys.argv[2])
-a = float(sys.argv[3])
-f = float(sys.argv[4])
+t_stdp = float(sys.argv[2])
+t_sr = float(sys.argv[3])
+a = float(sys.argv[4])
+f = float(sys.argv[5])
 
 
 
@@ -32,11 +33,11 @@ params = {
           'learnAllMatrices'    : True,                  #if True learns [STDP,TD] x [theta, noTheta] = all four. Other wise just STDPtheta and TDnoTheta 
           
           'kappa'               : k,          # von mises spread parameter
-          'tau_STDP'            : t,      #rate trace decays
+          'tau_STDP'            : t_stdp,      #rate trace decays
           'postpreAsymmetry'    : a,        #depressionStrength = postpreAsymmetry * potentiationStrength 
           'precessFraction'     : f,        #fraction of 2pi the prefered phase moves through
 
-
+          'tau'                 : t_sr   #sr timescale
           }
 
 
@@ -45,9 +46,9 @@ agent.runRat(trainTime=30)
 plotter = Visualiser(agent)
 
 fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
-saveFigure(fig,'Mav',specialLocation='../figures/paperFigures/figure2/2DE.svg')
+saveFigure(fig,'Mav',specialLocation='../figures/clusterSweep/%g_%g_%g_%g_%g.svg' %(int(1000*k),int(1000*t_sr),int(1000*t_stdp),int(1000*a),int(1000*f)))
 
-data = [str(k),str(t),str(a), str(f), str(round(R2,5)), str(round(skill,5)), str(round(area,5)), str(round(L2,5))]
+data = [str(k),str(t_stdp),str(t_sr),str(a), str(f), str(round(R2,5)), str(round(skill,5)), str(round(area,5)), str(round(L2,5))]
 with open("sweepResults.txt", "a") as f: 
     f.write(','.join(data))
     f.write('\n')
