@@ -2,7 +2,7 @@ import sys
 sys.path.insert(-1,"../")
 from mazeAgentUtils import *
 
-
+print("tester")
 
 k = float(sys.argv[1])
 t = float(sys.argv[2])
@@ -41,7 +41,7 @@ params = {
 
 
 agent =  MazeAgent(params)
-agent.runRat(trainTime=1)
+agent.runRat(trainTime=30)
 plotter = Visualiser(agent)
 
 fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
