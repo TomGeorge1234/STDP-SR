@@ -1531,7 +1531,7 @@ class Visualiser():
 
 
 
-def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None):
+def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None,figureDirectory="../figures/"):
     """saves figure to file, by data (folder) and time (name) 
     Args:
         fig (matplotlib fig object): the figure to be saved
@@ -1539,9 +1539,9 @@ def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None
     """	
 
     today =  datetime.strftime(datetime.now(),'%y%m%d')
-    if not os.path.isdir(f"../figures/{today}/"):
-        os.mkdir(f"../figures/{today}/")
-    figdir = f"../figures/{today}/"
+    if not os.path.isdir(figureDirectory + f"{today}/"):
+        os.mkdir(figureDirectory + f"{today}/")
+    figdir = figureDirectory + f"{today}/"
     now = datetime.strftime(datetime.now(),'%H%M')
     path_ = f"{figdir}{saveTitle}_{now}"
     path = path_
