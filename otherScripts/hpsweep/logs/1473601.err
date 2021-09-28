@@ -1,0 +1,6 @@
+../mazeAgentUtils.py:1538: MatplotlibDeprecationWarning: savefig() got unexpected keyword argument "tight_layout" which is no longer supported as of 3.3 and will become an error two minor releases later
+  fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
+../mazeAgentUtils.py:1538: MatplotlibDeprecationWarning: savefig() got unexpected keyword argument "tight_layout" which is no longer supported as of 3.3 and will become an error two minor releases later
+  fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
+../mazeAgentUtils.py:1541: MatplotlibDeprecationWarning: savefig() got unexpected keyword argument "tight_layout" which is no longer supported as of 3.3 and will become an error two minor releases later
+  fig.savefig(specialLocation, dpi=400,tight_layout=False,transparent=transparent)

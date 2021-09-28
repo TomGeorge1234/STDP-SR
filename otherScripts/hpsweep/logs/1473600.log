@@ -1,0 +1,20 @@
+tester
+Setting parameters
+Initialising
+   making state/history dataframes
+   initialising velocity, position and direction
+   setting time/run counters
+   making the maze walls
+   discretising position for later plotting
+   handling undefined parameters
+   initialising basis features for learning
+   calculating state vector at all discretised positions
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=10000.0), HTML(value='')))
+
+   initialising STDP weight matrix and traces
+DONE
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=6000.0), HTML(value='')))
+
+Calculating place and grid cells
+theta: (0.783630874058781, -4.512267294001292, 0.5121733243794048, 0.6054981902737859)
+no theta: (0.9014739973332584, -6.07888225450193, 0.8043959242515133, 0.7775839170438332)

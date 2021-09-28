@@ -201,6 +201,7 @@ class MazeAgent():
         if self.mazeType == 'TMaze':
             self.LRDecisionPending=True
         self.doorPassage = False
+        self.doorPassageTime = 0
 
         #initialise basis cells and M (successor matrix)
         print("   initialising basis features for learning")
@@ -544,27 +545,28 @@ class MazeAgent():
         proposedStep = np.array([self.pos,proposedNewPos])
 
         if self.biasDoorCross == True: 
-            #if agent crosses into door zone there's a 75% change it 'crosses into the other room'
+            #if agent crosses into door zone there's a 100% change it 'crosses into the other room'
             #this is done by setting agents direction in the right direction and not changing it again until after it's crossed
             doorRegionSize = 1
             if self.doorPassage == False:
                 #if step cross into door region
                 if (np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > doorRegionSize) and (np.linalg.norm(proposedNewPos - np.array([self.roomSize,self.roomSize/2])) < doorRegionSize) and (abs(self.pos[0] - self.roomSize) > 0.01):
-                    if np.random.uniform(0,1) < 0.9: #start a doorPassage
+                    if 100*np.random.uniform(0,1) < 100: #start a doorPassage
                         self.doorPassage = True
-                        self.dir = np.array([self.roomSize,self.roomSize/2]) - proposedNewPos
-                        self.dir = self.dir / np.linalg.norm(self.dir)
-                        self.pos = proposedNewPos
+                        self.doorPassageTime = self.t
                         return
                     else: #ignore this 
                         pass
             if self.doorPassage == True: 
-                self.pos = proposedNewPos
-                if np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > doorRegionSize:
+                if ((self.pos[0]<(self.roomSize)) != (proposedNewPos[0]<(self.roomSize))) or ((self.t - self.doorPassageTime)*self.speedScale > 2*doorRegionSize):
                     self.doorPassage = False
-                return
-            
+                    if ((self.pos[0]<(self.roomSize)) != (proposedNewPos[0]<(self.roomSize))): 
+                        print("crossed")
+                    if ((self.t - self.doorPassageTime)*self.speedScale > 2*doorRegionSize):
+                        print("time")
+        
         checkResult = self.checkWallIntercepts(proposedStep)
+
         if self.movementPolicy == 'randomWalk':
             if checkResult[0] != 'collisionNow': 
                 self.pos = proposedNewPos
@@ -594,7 +596,12 @@ class MazeAgent():
             if checkResult[0] == 'noImmediateCollision':
                 self.pos = proposedNewPos
                 self.speed = np.random.rayleigh(self.speedScale)
-                randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
+                randTurnMean = 0
+                if self.doorPassage == True: 
+                    d_theta  = theta(self.dir) - theta(np.array([self.roomSize,self.roomSize/2]) - self.pos)
+                    if d_theta > 0: randTurnMean = -self.rotSpeedScale/16
+                    else: randTurnMean = self.rotSpeedScale/16
+                randomTurnSpeed = np.random.normal(randTurnMean,self.rotSpeedScale)
                 self.dir = turn(self.dir,turnAngle=randomTurnSpeed*dt)
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
@@ -912,6 +919,18 @@ class MazeAgent():
                 states[idx] = self.posToState(pos = positionArray[idx],stateType = stateType)
 
         return states
+    
+    def averageM(self, M=None):
+        if M == None:
+            M = self.M
+        M_copy = M.copy()
+        roll = int(self.nCells/2)
+        for i in range(agent.nCells):
+            M_copy[i,:] = np.roll(M[i,:],-i+roll)
+        M_av,M_std = np.mean(M_copy,axis=0),np.std(M_copy,axis=0)
+        M_av, M_std = M_av/np.max(M_av), M_std/np.max(M_std)
+        return M_av, M_std
+
     
         
 def getWalls(mazeType, roomSize=1):
@@ -1363,7 +1382,7 @@ class Visualiser():
                     circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.5, facecolor=color)
                     ax.add_patch(circle)
                 
-        saveFigure(fig, "basis", tight_layout=False)
+        saveFigure(fig, "basis")
         return fig, ax 
     
     def plotHeatMap(self,smoothing=1):
@@ -1512,7 +1531,7 @@ class Visualiser():
 
 
 
-def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False,specialLocation=None):
+def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None):
     """saves figure to file, by data (folder) and time (name) 
     Args:
         fig (matplotlib fig object): the figure to be saved
@@ -1535,10 +1554,10 @@ def saveFigure(fig,saveTitle="",tight_layout=True,transparent=True,anim=False,sp
     if anim == True:
         fig.save(path + ".mp4")
     else:
-        fig.savefig(path+".pdf", dpi=400,tight_layout=tight_layout,transparent=transparent)
+        fig.savefig(path+".pdf", dpi=400,transparent=transparent)
     
     if specialLocation is not None: 
-        fig.savefig(specialLocation, dpi=400,tight_layout=False,transparent=transparent)
+        fig.savefig(specialLocation, dpi=400,transparent=transparent)
 
     return path
 
