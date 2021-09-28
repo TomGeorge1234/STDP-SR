@@ -1,4 +1,5 @@
 import subprocess
+import numpy as np 
 subprocess.run("rm slurmScript.sh", shell=True)
 
 #K = [0.5,1,2]
@@ -6,6 +7,12 @@ subprocess.run("rm slurmScript.sh", shell=True)
 #T_SR = [2,3,4]
 #A = [0.6,0.7,0.8,0.9]
 #F = [0.6,0.8,1.0]
+
+K = [1]
+T_STDP = [20e-3]
+T_SR = [3]
+A = [0.8]
+F = list(np.linspace(0.6,1,256))
 n_tasks = len(K)*len(T_STDP)*len(T_SR)*len(A)*len(F)
 
 
@@ -15,6 +22,7 @@ pre_schpeel = [
 "#SBATCH --ntasks=%g                  #how many independent script you are hoping to run \n" %n_tasks,
 "#SBATCH --time=18:00:00                         #compute time \n",
 "#SBATCH --mem-per-cpu=6000MB \n",
+"#SBATCH --cpus-per-task=1 \n",
 "#SBATCH --output=./logs/%j.log                  #where to save output log files (julia script prints here) \n",
 "#SBATCH --error=./logs/%j.err                   #where to save output error files \n"
 ]
@@ -26,10 +34,10 @@ with open("slurmScript.sh","a") as new:
 
     for k in K:
         for t_stdp in T_STDP:
-            t_sr in T_SR:
+            for t_sr in T_SR:
                 for a in A: 
                     for f in F:
-                        new.write("python clusterSweep.py %f %f %f %f %f &" %(k, t_stdp, t_sr, a, f))
+                        new.write("srun --ntasks=1 python clusterSweep.py %f %f %f %f %f &" %(k, t_stdp, t_sr, a, f))
                         new.write("\n")
     new.write("wait")
 

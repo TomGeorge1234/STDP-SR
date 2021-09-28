@@ -41,11 +41,11 @@ params = {
 
 
 agent =  MazeAgent(params)
-agent.runRat(trainTime=30)
+agent.runRat(trainTime=0.1)
 plotter = Visualiser(agent)
 
 fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
-saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/%g_%g_%g_%g_%g.svg' %(int(1000*k),int(1000*t_sr),int(1000*t_stdp),int(1000*a),int(1000*f)))
+saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/%g_%g_%g_%g_%g.svg' %(int(1000*k),int(1000*t_sr),int(1000*t_stdp),int(1000*a),int(1000*f)),figureDirectory="../../figures/")
 
 data = [str(k),str(t_stdp),str(t_sr),str(a), str(f), str(round(R2,5)), str(round(skill,5)), str(round(area,5)), str(round(L2,5))]
 with open("sweepResults.txt", "a") as f: 

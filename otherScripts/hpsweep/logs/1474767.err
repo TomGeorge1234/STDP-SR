@@ -1,0 +1,32 @@
+Traceback (most recent call last):
+  File "clusterSweep.py", line 47, in <module>
+    fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
+  File "../../mazeAgentUtils.py", line 1510, in plotMAveraged
+    saveFigure(fig,'M_averaged')
+  File "../../mazeAgentUtils.py", line 1543, in saveFigure
+    os.mkdir(figureDirectory + f"{today}/")
+FileNotFoundError: [Errno 2] No such file or directory: '../figures/210928/'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 47, in <module>
+    fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
+  File "../../mazeAgentUtils.py", line 1510, in plotMAveraged
+    saveFigure(fig,'M_averaged')
+  File "../../mazeAgentUtils.py", line 1543, in saveFigure
+    os.mkdir(figureDirectory + f"{today}/")
+FileNotFoundError: [Errno 2] No such file or directory: '../figures/210928/'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 47, in <module>
+    fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
+  File "../../mazeAgentUtils.py", line 1510, in plotMAveraged
+    saveFigure(fig,'M_averaged')
+  File "../../mazeAgentUtils.py", line 1543, in saveFigure
+    os.mkdir(figureDirectory + f"{today}/")
+FileNotFoundError: [Errno 2] No such file or directory: '../figures/210928/'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 47, in <module>
+    fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
+  File "../../mazeAgentUtils.py", line 1510, in plotMAveraged
+    saveFigure(fig,'M_averaged')
+  File "../../mazeAgentUtils.py", line 1543, in saveFigure
+    os.mkdir(figureDirectory + f"{today}/")
+FileNotFoundError: [Errno 2] No such file or directory: '../figures/210928/'
