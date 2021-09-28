@@ -1504,11 +1504,7 @@ class Visualiser():
         ax[1].spines['bottom'].set_linewidth(2)
         ax[1].spines['top'].set_color('none')
 
-        ax[0].legend(frameon=False)
-
-
-        saveFigure(fig,'M_averaged')
-    
+        ax[0].legend(frameon=False)    
         return fig, ax, comparison
     
     def fitEllipse(self,image, threshold=0.75):
