@@ -2,17 +2,17 @@ import subprocess
 import numpy as np 
 subprocess.run("rm slurmScript.sh", shell=True)
 
-#K = [0.5,1,2]
-#T_STDP = [20e-3, 25e-3, 30e-3]
-#T_SR = [2,3,4]
-#A = [0.6,0.7,0.8,0.9]
-#F = [0.6,0.8,1.0]
+K = [0.5,1,2]
+T_STDP = [20e-3, 25e-3, 30e-3]
+T_SR = [2,3,4]
+A = [0.6,0.7,0.8,0.9]
+F = [0.6,0.7,0.8]
 
-K = [1]
-T_STDP = [20e-3]
-T_SR = [3]
-A = [0.8]
-F = list(np.linspace(0.6,1,256))
+#K = [1]
+#T_STDP = [20e-3]
+#T_SR = [3]
+#A = [0.8]
+#F = list(np.linspace(0.6,1,256))
 n_tasks = len(K)*len(T_STDP)*len(T_SR)*len(A)*len(F)
 
 
@@ -37,7 +37,7 @@ with open("slurmScript.sh","a") as new:
             for t_sr in T_SR:
                 for a in A: 
                     for f in F:
-                        new.write("srun --ntasks=1 python clusterSweep.py %f %f %f %f %f &" %(k, t_stdp, t_sr, a, f))
+                        new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f &" %(k, t_stdp, t_sr, a, f))
                         new.write("\n")
     new.write("wait")
 
