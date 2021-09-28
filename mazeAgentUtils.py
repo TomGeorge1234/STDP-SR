@@ -13,7 +13,7 @@ import pickle
 import scipy
 from scipy.stats import vonmises
 from scipy.spatial import distance_matrix
-
+import time as Time 
 
 import matplotlib
 import matplotlib.pyplot as plt 
@@ -291,6 +291,7 @@ class MazeAgent():
         self.trace = np.zeros(self.nCells) #causes depression 
         self.trace_notheta = np.zeros(self.nCells) #causes depression 
         self.lastSpikeTime = -10
+        self.lastSpikeTime_notheta = -10
 
     def runRat(self,
             trainTime=10,
@@ -468,18 +469,21 @@ class MazeAgent():
             firingRate = self.posToState(self.pos)
             W = self.W_notheta
             trace = self.trace_notheta
+            lastSpikeTime = self.lastSpikeTime_notheta
 
-        if thetaModulation==True: #it usually will be
+
+        elif thetaModulation==True: #it usually will be
             firingRate = self.thetaModulation(self.posToState(self.pos)) #phase precession modulates spatially dependent firing rate 
             W = self.W
             trace = self.trace
-
+            lastSpikeTime = self.lastSpikeTime
         
         firingRate = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
         spike_list = []
+        n_spike_list = np.random.poisson(firingRate*dt)
         for cell in range(self.nCells):
             fr = firingRate[cell]
-            n_spikes = np.random.poisson(fr*dt)
+            n_spikes = n_spike_list[cell]
             if n_spikes != 0: 
                 time_of_spikes = np.random.uniform(self.t,self.t+dt,n_spikes)
                 for time in time_of_spikes:
@@ -487,7 +491,6 @@ class MazeAgent():
         spike_list = np.array(spike_list)
         if spike_list.shape[0] != 0: 
             spike_list = spike_list[np.argsort(spike_list[:,0])]
-            lastSpikeTime = self.lastSpikeTime
             for i in range(len(spike_list)):
                 time, cell = spike_list[i][0], int(spike_list[i][1])
                 timeDiff = time - lastSpikeTime 
@@ -499,8 +502,11 @@ class MazeAgent():
                 # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
                 lastSpikeTime = time 
 
-
-            self.lastSpikeTime=lastSpikeTime
+            if thetaModulation==False: #if you want to turn off theta 
+                self.lastSpikeTime_notheta = lastSpikeTime
+            if thetaModulation==False: #if you want to turn off theta 
+                self.lastSpikeTime = lastSpikeTime
+    
 
         return firingRate
 
@@ -738,9 +744,9 @@ class MazeAgent():
 
     def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
         """Given the cuurent proposed step [currentPos, nextPos] it calculates whether a collision with any of the walls exists along this step.
-        There are three possibilities from most worrying to least: 
-            • there is a collision ON the current step. Do something immediately. 
-            • there is a collision along the current trajectory in the next few cm's, but not on the current step. Consider doing something. 
+        There are three possibilities from most worrying to least:
+            • there is a collision ON the current step. Do something immediately.
+            • there is a collision along the current trajectory in the next few cm's, but not on the current step. Consider doing something.
             • there is no collision coming up soon. Carry on as you are. 
         Args:
             proposedStep (array): The proposed step. np.array( [ [x_current, y_current] , [x_next, y_next] ] )
