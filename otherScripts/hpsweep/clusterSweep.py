@@ -41,7 +41,7 @@ params = {
 
 
 agent =  MazeAgent(params)
-agent.runRat(trainTime=0.1)
+agent.runRat(trainTime=30)
 plotter = Visualiser(agent)
 
 fig, ax, (R2, skill, area, L2)  = plotter.plotMAveraged()
