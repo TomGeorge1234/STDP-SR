@@ -1,11 +1,12 @@
 import subprocess
 subprocess.run("rm slurmScript.sh", shell=True)
 
-K = [0.5,1,2]
-T = [20e-3, 25e-3, 30e-3]
-A = [0.6,0.7,0.8,0.9]
-F = [0.6,0.8,1.0]
-n_tasks = len(K)*len(T)*len(A)*len(F)
+#K = [0.5,1,2]
+#T_STDP = [20e-3, 25e-3, 30e-3]
+#T_SR = [2,3,4]
+#A = [0.6,0.7,0.8,0.9]
+#F = [0.6,0.8,1.0]
+n_tasks = len(K)*len(T_STDP)*len(T_SR)*len(A)*len(F)
 
 
 pre_schpeel = [
@@ -24,11 +25,11 @@ with open("slurmScript.sh","a") as new:
         new.write(line)
 
     for k in K:
-        for t in T:
-            for a in A: 
-                for f in F:
-                    new.write("python clusterSweep.py %f %f %f %f &" %(k, t, a, f))
-                    #new.write("python test.py &")
-                    new.write("\n")
+        for t_stdp in T_STDP:
+            t_sr in T_SR:
+                for a in A: 
+                    for f in F:
+                        new.write("python clusterSweep.py %f %f %f %f %f &" %(k, t_stdp, t_sr, a, f))
+                        new.write("\n")
     new.write("wait")
-    
+
