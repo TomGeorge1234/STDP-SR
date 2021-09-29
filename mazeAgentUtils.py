@@ -1469,10 +1469,13 @@ class Visualiser():
 
         fig, ax = plt.subplots(2,1,figsize=(3,2))
 
+        comparison = comparisonMetrics(W_av,M_av,x)
+        comparison_notheta = comparisonMetrics(W_notheta_av,M_av,x)
+
         ax[1].plot(x,M_av,c='C0',linewidth=2)
-        ax[0].plot(x,W_av,label=r"$\theta$",c='C1',linewidth=2)
+        ax[0].plot(x,W_av,label=r"$\theta:$      R$^{2}$ = %.3f"%(comparison[0]),c='C1',linewidth=2)
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
-        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.5,linestyle='dotted')
+        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta:$ R$^{2}$ = %.3f"%(comparison_notheta[0]),linewidth=1.5,alpha=0.5,linestyle='dotted')
 
         comparison = comparisonMetrics(W_av,M_av,x)
         print("theta:", comparison)
