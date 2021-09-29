@@ -2,9 +2,9 @@ import subprocess
 import numpy as np 
 subprocess.run("rm slurmScript.sh", shell=True)
 
-K = [0.01,0.1,0.2,0.5,0.75,1]
-T_STDP = [20e-3,25e-3, 30e-3]
-T_SR = [4]
+K = [0.01,0.05,0.1,0.2,0.4,0.5,0.75,1]
+T_STDP = [25e-3, 30e-3]
+T_SR = [3,4,5]
 A = [0.8,0.9,0.95]
 F = [0.6,0.7,0.8,0.9]
 

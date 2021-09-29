@@ -511,7 +511,7 @@ class MazeAgent():
         return firingRate
 
     
-    def thetaModulation(self, firingRate, position=None, direction=None):
+    def thetaModulation(self, firingRate, position=None, direction=None,normalise=False):
         """Takes a firing rate vector and modulates it to account for theta phase precession
 
         Args:
@@ -529,7 +529,10 @@ class MazeAgent():
         preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
 
         phaseDiff = preferedThetaPhase - self.thetaPhase
-        modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) / scipy.stats.vonmises.pdf(0,kappa=self.kappa)
+        if normalise == True: 
+            modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) / scipy.stats.vonmises.pdf(0,kappa=self.kappa)
+        else: 
+            modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) * 2*np.pi
 
         return modulatedFiringRate
         
@@ -1453,10 +1456,11 @@ class Visualiser():
         M_theta_av,M_theta_std = np.mean(M_theta_copy,axis=0),np.std(M_theta_copy,axis=0)
         W_notheta_av,W_notheta_std = np.mean(W_notheta_copy,axis=0),np.std(W_notheta_copy,axis=0)
        
+        W_norm = np.maximum(np.max(W_notheta_av),np.max(W_av))
         M_av,M_std = M_av/(np.max(M_av)), M_std/(np.max(M_av))
-        W_av,W_std = W_av/(np.max(W_av)), W_std/(np.max(W_av))
+        W_av,W_std = W_av/W_norm, W_std/W_norm
         M_theta_av,M_theta_std = M_theta_av/(np.max(M_theta_av)), M_theta_std/(np.max(M_theta_av))
-        W_notheta_av,W_notheta_std = W_notheta_av/(np.max(W_notheta_av)), W_notheta_std/(np.max(W_notheta_av))
+        W_notheta_av,W_notheta_std = W_notheta_av/W_norm, W_notheta_std/W_norm
         x = self.mazeAgent.centres[:,0]
         x = x-x[roll]
 
@@ -1607,6 +1611,6 @@ def comparisonMetrics(y1,y2,x=None):
     skill = 1 - ( (np.sum((y1-y2)**2)) / (np.std(y2)**2) )**(1/2) 
     area = np.trapz(y = np.abs(y1 - y2), x=x) / np.trapz(y = np.abs(y2), x=x)
     L2 = np.linalg.norm(y1 - y2) / np.linalg.norm(y2)
-
+    skew = (scipy.stats.skew(y1) - scipy.stats.skew(y2))**2
     return (R2, skill, area, L2)
 
