@@ -25,7 +25,7 @@ params = {
           'stateType'           : 'gaussianThreshold',   #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
           'movementPolicy'      : 'windowsScreensaver',  #movement policy (raudies, random walk, windows screensaver)
           'roomSize'            : 5,                     #maze size scaling parameter, metres
-          'dt'                  : 0.0008,                 #simulation time disretisation 
+          'dt'                  : 0.001,                 #simulation time disretisation 
           'centres'             : centres,               #array of receptive field positions. Overwrites nCells
           'sigma'               : 1,                     #basis cell width scale (irrelevant for onehots)
           'doorsClosed'         : False,                 #whether doors are opened or closed in multicompartment maze
