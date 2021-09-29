@@ -74,8 +74,8 @@ defaultParams = {
           'peakFiringRate'      : 20,         #peak firing rate of a cell (middle of place field, preferred theta phase)
           'postpreAsymmetry'    : 0.8,        #depressionStrength = postpreAsymmetry * potentiationStrength 
           'tau_STDP'            : 30e-3,      #rate trace decays
-          'eta'                 : 0.1,        #learning rate for pre to post strengthening 
-          'weightDecayTime'     : 20,         #STDP weight decay time in seconds 
+          'eta'                 : 0.05,        #learning rate for pre to post strengthening 
+          'weightDecayTime'     : 10,         #STDP weight decay time in seconds 
           'kappa'               : 1,          # von mises spread parameter
           'baselineFiringRate'  : 0           #baseline firing rate for cells 
 
