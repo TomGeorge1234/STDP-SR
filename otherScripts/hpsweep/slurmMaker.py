@@ -3,7 +3,7 @@ import numpy as np
 subprocess.run("rm slurmScript.sh", shell=True)
 
 K = [0.01,0.05,0.2,0.4,0.5,1]
-T_STDP = [30e-3]
+T_STDP = [25e-3,30e-3]
 T_SR = [4,5]
 A = [0.9,0.95,0.98]
 F = [0.6,0.7,0.8]
