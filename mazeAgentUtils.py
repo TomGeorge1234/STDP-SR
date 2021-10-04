@@ -64,7 +64,7 @@ defaultParams = {
           'learnAllMatrices'    : False,      #if True learns [STDP,TD] x [theta, notheta] = all four. Other wise just STDPtheta and TDnotheta 
 
           #TD params 
-          'tau'                 : 2,          #TD decay time, seconds
+          'tau'                 : 4,          #TD decay time, seconds
           'TDdx'                : 0.01,       #rough distance between TD learning updates, metres 
           'alpha'               : 0.01,       #TD learning rate 
           'successorFeatureNorm': 100,        #linear scaling on successor feature definition found to improve learning stability
@@ -283,15 +283,19 @@ class MazeAgent():
         self.statesAlreadyInitialised = True
 
         #store time zero snapshot
-        snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
+        snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()],'W_notheta': [self.W_notheta.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
         #STDP stuff
         print("   initialising STDP weight matrix and traces")
-        self.trace = np.zeros(self.nCells) #causes depression 
-        self.trace_notheta = np.zeros(self.nCells) #causes depression 
+        self.preTrace = np.zeros(self.nCells) #causes potentiation 
+        self.preTrace_notheta = np.zeros(self.nCells) #causes potentiation 
+        self.postTrace = np.zeros(self.nCells) #causes depression 
+        self.postTrace_notheta = np.zeros(self.nCells) #causes depression
         self.lastSpikeTime = -10
         self.lastSpikeTime_notheta = -10
+        self.spikeCount = 0
+        self.spikeCount_notheta = 0
 
     def runRat(self,
             trainTime=10,
@@ -376,8 +380,10 @@ class MazeAgent():
 
                 #save snapshot 
                 if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
-                    snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
+                    snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'W_notheta':[self.W_notheta.copy()], 'mazeState':[self.mazeState]})
                     self.snapshots = self.snapshots.append(snapshot)
+                    print(self.W[0,0],self.W_notheta[0,0])
+
             except KeyboardInterrupt: 
                 print("Keyboard Interrupt:")
                 break
@@ -387,10 +393,11 @@ class MazeAgent():
                 print(f"   Rat position: {self.pos}")
                 break
 
+        
         self.runID += 1
         runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
         self.history = self.history.append(runHistory)
-        snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'mazeState':[self.mazeState]})
+        snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'W_notheta':[self.W_notheta.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
 
         #find and save grid/place cells so you don't have to repeatedly calculate them when plotting 
@@ -468,46 +475,46 @@ class MazeAgent():
         if thetaModulation==False: #if you want to turn off theta 
             firingRate = self.posToState(self.pos)
             W = self.W_notheta
-            trace = self.trace_notheta
+            preTrace = self.preTrace_notheta
+            postTrace = self.postTrace_notheta
             lastSpikeTime = self.lastSpikeTime_notheta
 
 
         elif thetaModulation==True: #it usually will be
             firingRate = self.thetaModulation(self.posToState(self.pos)) #phase precession modulates spatially dependent firing rate 
             W = self.W
-            trace = self.trace
+            preTrace = self.preTrace
+            postTrace = self.postTrace
             lastSpikeTime = self.lastSpikeTime
         
         firingRate = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
-        spike_list = []
         n_spike_list = np.random.poisson(firingRate*dt)
-        for cell in range(self.nCells):
-            fr = firingRate[cell]
-            n_spikes = n_spike_list[cell]
-            if n_spikes != 0: 
-                time_of_spikes = np.random.uniform(self.t,self.t+dt,n_spikes)
-                for time in time_of_spikes:
-                    spike_list.append([time,cell])
-        spike_list = np.array(spike_list)
-        if spike_list.shape[0] != 0: 
-            spike_list = spike_list[np.argsort(spike_list[:,0])]
-            for i in range(len(spike_list)):
-                time, cell = spike_list[i][0], int(spike_list[i][1])
-                timeDiff = time - lastSpikeTime 
-                trace *= np.exp(- timeDiff / self.tau_STDP) #traces for all cells decay...
-                W[cell,:] += self.eta * trace #weights to postsynaptic neuron (should increase when post fires)
-                W[:,cell] -= self.eta * trace * self.postpreAsymmetry #weights to presynaptic neuron (should decrease when post fires) 
-                trace[cell] += 1 #update trace 
-                # weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
-                # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
-                lastSpikeTime = time 
+        
+        spikingNeurons = (n_spike_list != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
+        spikeTimes = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons]
+        spikeIDs = np.arange(self.nCells)[spikingNeurons]
+        spikeList = np.vstack((spikeIDs,spikeTimes)).T
+        spikeList = spikeList[np.argsort(spikeList[:,1])]   
 
-            if thetaModulation==False: #if you want to turn off theta 
-                self.lastSpikeTime_notheta = lastSpikeTime
-            if thetaModulation==False: #if you want to turn off theta 
-                self.lastSpikeTime = lastSpikeTime
-    
+        for spikeInfo in spikeList:
+            cell, time = int(spikeInfo[0]), spikeInfo[1] 
+            timeDiff = time - lastSpikeTime 
+            preTrace *= np.exp(- timeDiff / self.tau_STDP) #traces for all cells decay...
+            postTrace *= np.exp(- timeDiff / (2*self.tau_STDP)) #traces for all cells decay...
+            W[cell,:] += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
+            W[:,cell] -= self.eta * postTrace * 0.5*self.postpreAsymmetry #weights to presynaptic neuron (should decrease when post fires) 
+            preTrace[cell] += 1 #update trace 
+            postTrace[cell] += 1 #update trace 
+            # weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
+            # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
+            lastSpikeTime = time 
 
+        if thetaModulation==False: #if you want to turn off theta 
+            self.lastSpikeTime_notheta = lastSpikeTime
+            self.spikeCount_notheta += len(spikeList)
+        elif thetaModulation==True: #if you want to turn off theta 
+            self.lastSpikeTime = lastSpikeTime
+            self.spikeCount += len(spikeList)
         return firingRate
 
     
@@ -821,7 +828,7 @@ class MazeAgent():
         """        
         if M is None: 
             M = self.M
-        
+        M = M.copy()
         #normalise: 
         # M = M / np.diag(M)[:,np.newaxis]
         if threshold is None: 
@@ -845,6 +852,7 @@ class MazeAgent():
         Returns:
             array: Receptive fields of shape [nCells, nX, nY]
         """
+        M = M.copy()
         _, eigvecs = np.linalg.eig(M) #"v[:,i] is the eigenvector corresponding to the eigenvalue w[i]"
         eigvecs = np.real(eigvecs)
         gridCellThreshold = 0 
@@ -1181,10 +1189,10 @@ class Visualiser():
         else:
             fig, ax = plt.subplots(figsize=(2,2))
         if M is None:
-            if whichM == 'M': M = snapshot['M']
-            elif whichM == 'W': M = snapshot['W']
-            elif whichM == 'M_theta': M = self.mazeAgent.M_theta
-            elif whichM == 'W_notheta': M = self.mazeAgent.W_notheta
+            if whichM == 'M': M = snapshot['M'].copy()
+            elif whichM == 'W': M = snapshot['W'].copy()
+            elif whichM == 'M_theta': M = self.mazeAgent.M_theta.copy()
+            elif whichM == 'W_notheta': M = self.mazeAgent.W_notheta.copy()
 
 
         t = int(np.round(snapshot['t']))
@@ -1293,7 +1301,6 @@ class Visualiser():
     def plotGridField(self, hist_id=-1, time=None, fig=None, ax=None, number=0, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False):
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
-
         snapshot = self.snapshots.iloc[hist_id]
         M = snapshot['M']
         if STDP==True: 
@@ -1437,29 +1444,31 @@ class Visualiser():
         saveFigure(fig,"firingRate")
         return fig, ax 
     
-    def plotMAveraged(self):
+    def plotMAveraged(self,time=None):
         # only works/defined for open loop maze
-        M = self.mazeAgent.M
-        W = self.mazeAgent.W
-        M_theta = self.mazeAgent.M_theta
-        W_notheta = self.mazeAgent.W_notheta
+        if time is not None: 
+            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
+            snapshot = self.snapshots.iloc[hist_id]
+        else:
+            snapshot = self.snapshots.iloc[-1]
+
+        M = snapshot['M'].copy()
+        W = snapshot['W'].copy()
+        W_notheta = snapshot['W_notheta'].copy()
         roll = int(self.mazeAgent.nCells/2)
-        M_copy, W_copy, M_theta_copy, W_notheta_copy = M.copy(), W.copy(), M_theta.copy(), W_notheta.copy()
+        M_copy, W_copy, W_notheta_copy = M.copy(), W.copy(), W_notheta.copy()
         for i in range(self.mazeAgent.nCells):
             M_copy[i,:] = np.roll(M[i,:],-i+roll)
             W_copy[i,:] = np.roll(W[i,:],-i+roll)
-            M_theta_copy[i,:] = np.roll(M_theta[i,:],-i+roll)
             W_notheta_copy[i,:] = np.roll(W_notheta[i,:],-i+roll)
 
         M_av,M_std = np.mean(M_copy,axis=0),np.std(M_copy,axis=0)
         W_av,W_std = np.mean(W_copy,axis=0),np.std(W_copy,axis=0)
-        M_theta_av,M_theta_std = np.mean(M_theta_copy,axis=0),np.std(M_theta_copy,axis=0)
         W_notheta_av,W_notheta_std = np.mean(W_notheta_copy,axis=0),np.std(W_notheta_copy,axis=0)
        
         W_norm = np.maximum(np.max(W_notheta_av),np.max(W_av))
         M_av,M_std = M_av/(np.max(M_av)), M_std/(np.max(M_av))
         W_av,W_std = W_av/W_norm, W_std/W_norm
-        M_theta_av,M_theta_std = M_theta_av/(np.max(M_theta_av)), M_theta_std/(np.max(M_theta_av))
         W_notheta_av,W_notheta_std = W_notheta_av/W_norm, W_notheta_std/W_norm
         x = self.mazeAgent.centres[:,0]
         x = x-x[roll]
@@ -1473,24 +1482,27 @@ class Visualiser():
 
         fig, ax = plt.subplots(2,1,figsize=(3,2))
 
-        comparison = comparisonMetrics(W_av,M_av,x)
-        comparison_notheta = comparisonMetrics(W_notheta_av,M_av,x)
+        # Rs_wav = comparisonMetrics(W_av,M_av,x)[0]
+        # Rsq_wnothetaav = comparisonMetrics(W_notheta_av,M_av,x)[0]
+
+        Rs_wav = R2(W,M)
+        Rsq_wnothetaav = R2(W_notheta,M)
 
         ax[1].plot(x,M_av,c='C0',linewidth=2)
-        ax[0].plot(x,W_av,label=r"$\theta:$      R$^{2}$ = %.3f"%(comparison[0]),c='C1',linewidth=2)
+        ax[0].plot(x,W_av,c='C1',label=r"$\theta$",linewidth=2)
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
-        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta:$ R$^{2}$ = %.3f"%(comparison_notheta[0]),linewidth=1.5,alpha=0.5,linestyle='dotted')
+        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.7,linestyle='dotted')
 
         comparison = comparisonMetrics(W_av,M_av,x)
-        print("theta:", comparison)
-        print("no theta:", comparisonMetrics(W_notheta_av,M_av,x))
 
-        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.5)
-        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.5)
+        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.3)
+        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.3)
+        ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.15)
         ax[0].set_yticks([])
         ax[1].set_yticks([])
         ax[0].set_xlim(min(x),max(x))
         ax[1].set_xlim(min(x),max(x))
+        ax[0].set_ylim(min(W_av-W_std),max(W_av+W_std))
         ax[0].set_xticks([-2,-1,0,1,2])
         ax[0].set_xticklabels(['','','','',''])
         ax[1].set_xticks([-2,-1,0,1,2])
@@ -1519,7 +1531,103 @@ class Visualiser():
 
         ax[0].legend(frameon=False)    
         return fig, ax, comparison
-    
+
+    def plotVarianceAndError(self):
+        t         = []
+
+        W_var         = [] 
+        W_notheta_var = []
+
+        W_snr         = [] 
+        W_notheta_snr = []
+
+        W_err         = [] 
+        W_notheta_err = []
+
+        W_r2 = []
+        W_notheta_r2  = []
+
+        M = rowAlignMatrix(self.mazeAgent.snapshots.iloc[-1]['M'])
+        M_max = np.mean(M.flatten()[np.argsort(M.flatten())[:10]])
+
+        for i in range(len(self.mazeAgent.snapshots)-1):
+            snapshot = self.mazeAgent.snapshots.iloc[i]
+            time = snapshot['t']/60
+            if time >= 0.6:
+
+                W = rowAlignMatrix(snapshot['W'])
+                W_notheta = rowAlignMatrix(snapshot['W_notheta'])
+
+                W_max = np.mean(W.flatten()[np.argsort(W.flatten())[:10]])
+                W_notheta_max = np.mean(W_notheta.flatten()[np.argsort(W_notheta.flatten())[:10]])
+        
+                t.append(time)
+
+                W_snr.append((np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)))
+                W_notheta_snr.append((np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0)))
+
+                W_var.append(np.mean(np.var(W,axis=0)))
+                W_notheta_var.append(np.mean(np.var(W_notheta,axis=0)))
+                
+                W_err.append(np.linalg.norm(((W/W_max) - (M/M_max))/W.size))
+                W_notheta_err.append(np.linalg.norm(((W_notheta/W_notheta_max) - (M/M_max))/W.size))
+            
+                W_r2.append(R2(W,M))
+                W_notheta_r2.append(R2(W_notheta,M))
+
+        fig, ax = plt.subplots(4,1,figsize=(3,5.5),sharex=True)
+
+        ax[0].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
+        ax[0].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7,label=r"No $\theta$")
+
+        ax[1].plot(t,W_var,c='C1',linewidth=2)
+        ax[1].plot(t,W_notheta_var,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+
+        ax[2].plot(t,W_err,c='C1',linewidth=2)
+        ax[2].plot(t,W_notheta_err,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+
+        ax[3].plot(t,W_r2,c='C1',linewidth=2)
+        ax[3].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+
+        ax[0].set_ylim(bottom=0)
+        ax[1].set_ylim(bottom=0)
+        # ax[2].set_ylim(bottom=0)
+        ax[3].set_ylim(bottom=0)
+
+        ax[0].set_title("SNR")
+        ax[1].set_title("Variance")
+        ax[2].set_title("L2 Error")
+        ax[3].set_title("R2")
+
+        for i in range(4):
+        # ax[1].set_yticks([])
+        # ax[0].set_xlim(0,max(x))
+        # ax[0].set_ylim(min(W_av-W_std),max(W_av+W_std))
+        # ax[0].set_xticks([-2,0,1,2])
+        # ax[0].set_xticklabels(['','','','',''])
+        # ax[0].tick_params(width=2,color='darkgrey')
+        # ax[1].tick_params(width=2,color='darkgrey')
+        # plt.grid(False)
+
+            # ax[i].spines['left'].set_position('zero')
+            ax[i].spines['left'].set_color('darkgrey')
+            ax[i].spines['left'].set_linewidth(2)
+            ax[i].spines['right'].set_color('none')        
+            # ax[i].spines['bottom'].set_position('zero')
+            ax[i].spines['bottom'].set_color('darkgrey')
+            ax[i].spines['bottom'].set_linewidth(2)
+            ax[i].spines['top'].set_color('none')
+
+        ax[0].legend()
+        ax[3].set_xlabel("Exploration time")
+
+        return fig, ax
+
+
+        return
+
+
+
     def fitEllipse(self,image, threshold=0.75):
         im = np.maximum(image - np.max(image)*threshold,0)
         gradgrad = np.linalg.norm(np.array(np.gradient(np.linalg.norm(np.array(np.gradient(im)),axis=0))),axis=0)
@@ -1537,7 +1645,12 @@ class Visualiser():
         Z_coord = W[0] * X_coord ** 2 + W[1] * X_coord * Y_coord + W[2] * Y_coord**2 + W[3] * X_coord + W[4] * Y_coord 
         return (X_coord, Y_coord, Z_coord)
 
-
+def rowAlignMatrix(M):
+    M_copy = M.copy()
+    roll = int(M.shape[0]/2)
+    for i in range(M.shape[0]):
+        M_copy[i,:] = np.roll(M[i,:],-i+roll)
+    return M_copy
 
 
 def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None,figureDirectory="../figures/"):
@@ -1607,10 +1720,12 @@ def comparisonMetrics(y1,y2,x=None):
     """  
     if x is None: x = np.arange(len(y1))
 
-    R2 = ((1/len(y1)) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
+    Rsquared = R2(y1,y2)
     skill = 1 - ( (np.sum((y1-y2)**2)) / (np.std(y2)**2) )**(1/2) 
     area = np.trapz(y = np.abs(y1 - y2), x=x) / np.trapz(y = np.abs(y2), x=x)
     L2 = np.linalg.norm(y1 - y2) / np.linalg.norm(y2)
     skew = (scipy.stats.skew(y1) - scipy.stats.skew(y2))**2
-    return (R2, skill, area, L2)
+    return (Rsquared, skill, area, L2)
 
+def R2(y1, y2):
+    return ((1/y1.size) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
