@@ -26,7 +26,7 @@ params = {
           'stateType'           : 'gaussianThreshold', #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
           'movementPolicy'      : 'windowsScreensaver',  #movement policy (raudies, random walk, windows screensaver)
           'roomSize'            : 5,          #maze size scaling parameter, metres
-          'dt'                  : 0.1,       #simulation time disretisation 
+          'dt'                  : 0.002,       #simulation time disretisation 
           'dx'                  : 0.01,       #space discretisation (for plotting, movement is continuous)
           'initPos'             : [0.1,0.1],  #initial position [x0, y0], metres
           'centres'             : centres,       #array of receptive field positions. Overwrites nCells
@@ -48,7 +48,7 @@ params = {
 }
 
 agent =  MazeAgent(params)
-agent.runRat(trainTime=1)
+agent.runRat(trainTime=60)
 plotter = Visualiser(agent)
 
 fig, ax = plotter.plotMAveraged(time=10)

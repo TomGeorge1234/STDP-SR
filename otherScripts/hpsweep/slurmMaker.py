@@ -33,13 +33,13 @@ with open("slurmScript.sh","a") as new:
     for line in pre_schpeel:
         new.write(line)
 
-    for t_st in T_ST:
+    for t_sr in T_SR:
         for t_stdp in T_STDP:
             for t_stdp_asymm in T_STDP_ASYMM:
                 for a_stdp_asymm in A_STDP_ASYMM:
                     for f in F:
-                        for k in K
-                            new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f &" %(t_sr, t_stdp, t_stdp_asyym, a_stdp_asymm, f, k))
+                        for k in K:
+                            new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f %f &" %(t_sr, t_stdp, t_stdp_asymm, a_stdp_asymm, f, k))
                             new.write("\n")
     new.write("wait")
 

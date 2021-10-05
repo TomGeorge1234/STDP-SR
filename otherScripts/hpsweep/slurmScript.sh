@@ -6,220 +6,220 @@
 #SBATCH --cpus-per-task=1 
 #SBATCH --output=./logs/%j.log                  #where to save output log files (julia script prints here) 
 #SBATCH --error=./logs/%j.err                   #where to save output error files 
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.025000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.010000 0.030000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.025000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.050000 0.030000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.025000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.200000 0.030000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.025000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.400000 0.030000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.025000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 0.500000 0.030000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.025000 5.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 4.000000 0.980000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.900000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.900000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.900000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.950000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.950000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.950000 0.800000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.980000 0.600000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.980000 0.700000 &
-srun --ntasks=1 --nodes=1 python clusterSweep.py 1.000000 0.030000 5.000000 0.980000 0.800000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 1.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.000000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 2.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 1.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.000000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.030000 2.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 1.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.000000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.020000 2.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 1.500000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.000000 -0.500000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.400000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.400000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.400000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.400000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.400000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.400000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.450000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.450000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.450000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.450000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.450000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.450000 0.800000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.500000 0.600000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.500000 0.600000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.500000 0.600000 1.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.500000 0.800000 0.500000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.500000 0.800000 1.000000 &
+srun --ntasks=1 --nodes=1 python clusterSweep.py 5.000000 0.030000 2.500000 -0.500000 0.800000 1.500000 &
 wait
