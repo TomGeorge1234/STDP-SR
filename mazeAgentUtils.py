@@ -61,23 +61,28 @@ defaultParams = {
           'reorderCells'        : True,       #whether to reorde the cell centres which have been provided
           'firingRateLookUp'    : False,      #use quantised lookup table for firing rates 
           'biasDoorCross'       : False,      #if True, in twoRoom maze door crossings are biased towards
-          'learnAllMatrices'    : False,      #if True learns [STDP,TD] x [theta, notheta] = all four. Other wise just STDPtheta and TDnotheta 
 
           #TD params 
           'tau'                 : 4,          #TD decay time, seconds
           'TDdx'                : 0.01,       #rough distance between TD learning updates, metres 
           'alpha'               : 0.01,       #TD learning rate 
           'successorFeatureNorm': 100,        #linear scaling on successor feature definition found to improve learning stability
-
+          'TDreg'               : 0.01,       #L2 regularisation 
+          
           #STDP params
-          'precessFraction'     : 0.7,        #fraction of 2pi the prefered phase moves through
-          'peakFiringRate'      : 20,         #peak firing rate of a cell (middle of place field, preferred theta phase)
-          'postpreAsymmetry'    : 0.8,        #depressionStrength = postpreAsymmetry * potentiationStrength 
+          'peakFiringRate'      : 5,          #peak firing rate of a cell (middle of place field, preferred theta phase)
           'tau_STDP'            : 30e-3,      #rate trace decays
-          'eta'                 : 0.05,        #learning rate for pre to post strengthening 
-          'weightDecayTime'     : 10,         #STDP weight decay time in seconds 
+          'tau_STDP_asymm'      : 2,          # tau- = this * tau+ 
+          'a_STDP'              : 1,          #pre-before-post potentiation factor 
+          'a_STDP_asymm'        : -0.45,       #post-before-pre potentiation factor = this * pre-before-post
+          'eta'                 : 0.05,       #STDP learning rate
+          'baselineFiringRate'  : 0,           #baseline firing rate for cells 
+
+
+          #Theta precession params
+          'thetaFreq'           : 10,         #theta frequency
+          'precessFraction'     : 0.7,        #fraction of 2pi the prefered phase moves through
           'kappa'               : 1,          # von mises spread parameter
-          'baselineFiringRate'  : 0           #baseline firing rate for cells 
 
 }
 
@@ -147,7 +152,7 @@ class MazeAgent():
         print("   setting time/run counters")
         self.t = 0
         self.runID = 0  
-        self.thetaPhase = 10*(self.t%(1/10))*2*np.pi
+        self.thetaPhase = self.thetaFreq*(self.t%(1/self.thetaFreq))*2*np.pi
 
 
         #make maze 
@@ -243,7 +248,6 @@ class MazeAgent():
                         count += 1
             self.M = np.eye(self.stateSize)
             self.W = self.M.copy() / self.nCells
-
             self.M_theta = self.M.copy()
             self.W_notheta = self.W.copy()
 
@@ -300,7 +304,7 @@ class MazeAgent():
     def runRat(self,
             trainTime=10,
             plotColor=None,
-            saveEvery=1,
+            saveEvery=0.5,
             TDSRLearn=True,
             STDPLearn=True):
         """The main experiment call.
@@ -344,8 +348,6 @@ class MazeAgent():
                     """STDP learning step"""
                     if (STDPLearn == True) and (self.stateType in  ['bump','gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
                         hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
-                        if self.learnAllMatrices == True:
-                            _ = self.STDPLearningStep(dt = self.t - hist_t[i-1],thetaModulation=False)
 
                             
                     """TD learning step"""
@@ -359,8 +361,6 @@ class MazeAgent():
                         if np.linalg.norm(self.pos - hist_pos[lastTDstep]) >= distanceToTD: #if it's moved over 2cm meters from last step 
                             dtTD = self.t - hist_t[lastTDstep]
                             delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
-                            if self.learnAllMatrices == True:
-                                _ = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_, thetaModulation=True)
                             lastTDstep = i 
                             distanceToTD = np.random.exponential(self.TDdx)
                             hist_plotColor[i] = 'r'
@@ -368,8 +368,7 @@ class MazeAgent():
 
 
 
-                self.thetaFrequency = 10
-                self.thetaPhase = self.thetaFrequency*(self.t%(1/self.thetaFrequency))*2*np.pi #8Hz theta 
+                self.thetaPhase = self.thetaFreq*(self.t%(1/self.thetaFreq))*2*np.pi #8Hz theta 
 
                 #update history arrays
                 hist_pos[i] = self.pos
@@ -382,7 +381,6 @@ class MazeAgent():
                 if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
                     snapshot = pd.DataFrame({'t':[self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'W_notheta':[self.W_notheta.copy()], 'mazeState':[self.mazeState]})
                     self.snapshots = self.snapshots.append(snapshot)
-                    print(self.W[0,0],self.W_notheta[0,0])
 
             except KeyboardInterrupt: 
                 print("Keyboard Interrupt:")
@@ -420,7 +418,7 @@ class MazeAgent():
             ax.set_xlabel("Time / min")
             ax.set_ylabel("Update size")
 
-    def TDLearningStep(self, pos, prevPos, dt, tau, alpha, reluM=False, lam=0.01, thetaModulation=False):
+    def TDLearningStep(self, pos, prevPos, dt, tau, alpha):
         """TD learning step
             Improves estimate of SR matrix, M, by a TD learning step. 
             By default this is done using learning rule for generic feature vectors (see de Cothi and Barry 2020). 
@@ -435,33 +433,33 @@ class MazeAgent():
             mask (bool or str): whether to mask TM update to update only cells near current location
             asynchronus (bool): update cells asynchronusly (like hopfield)
         """
-        if thetaModulation == False:
-            state = self.posToState(pos,stateType=self.stateType) 
-            prevState = self.posToState(prevPos,stateType=self.stateType) 
-            M = self.M
+        state = self.posToState(pos,stateType=self.stateType) 
+        prevState = self.posToState(prevPos,stateType=self.stateType) 
 
-        elif thetaModulation == True:
-            state = self.thetaModulation(self.posToState(pos,stateType=self.stateType))
-            prevState = self.thetaModulation(self.posToState(prevPos,stateType=self.stateType))
-            M = self.M_theta
+        data = ( (state,                        prevState,                    self.M        ) ,
+                 (self.thetaModulation(state),  self.thetaModulation(state),  self.M_theta) )
+
         
+        for i, (state, prevState, M) in  enumerate(data): 
+            #onehot optimised TD learning 
+            if self.stateType == 'onehot': 
+                s_t = np.argwhere(prevState)[0][0]
+                s_tplus1 = np.argwhere(state)[0][0]
+                Delta = state + (tau / dt) * ((1 - dt/tau) * M[:,s_tplus1] - M[:,s_t])
+                M[:,s_t] += alpha * Delta - 2 * alpha * self.TDreg * M[:,s_t]
 
-        #onehot optimised TD learning 
-        if self.stateType == 'onehot': 
-            s_t = np.argwhere(prevState)[0][0]
-            s_tplus1 = np.argwhere(state)[0][0]
-            Delta = state + (tau / dt) * ((1 - dt/tau) * M[:,s_tplus1] - M[:,s_t])
-            M[:,s_t] += alpha * Delta - 2 * alpha * lam * M[:,s_t]
+            #normal TD learning 
+            else:
+                delta = ((tau * dt) / (tau + dt)) * self.successorFeatureNorm * prevState + M @ ((tau/(tau + dt))*state - prevState)
+                Delta = np.outer(delta, prevState)
+                M += alpha * Delta - 2 * alpha * self.TDreg * M #regularisation
+            
+            if i == 0: 
+                Del = Delta
 
-        #normal TD learning 
-        else:
-            delta = ((tau * dt) / (tau + dt)) * self.successorFeatureNorm * prevState + M @ ((tau/(tau + dt))*state - prevState)
-            Delta = np.outer(delta, prevState)
-            M += alpha * Delta - 2 * alpha * lam * M #regularisation
-
-        return np.linalg.norm(Delta)
+        return np.linalg.norm(Del)
         
-    def STDPLearningStep(self,dt,thetaModulation=True):       
+    def STDPLearningStep(self,dt):       
         """Takes the curent theta phase and estimate firing rates for all basis cells according to a simple theta sweep model. 
            From here it samples spikes and performs STDP learning on a weight matrix.
 
@@ -471,54 +469,47 @@ class MazeAgent():
         Returns:
             float array: vector of firing rates for this time step 
         """   
+        state = self.posToState(self.pos)
 
-        if thetaModulation==False: #if you want to turn off theta 
-            firingRate = self.posToState(self.pos)
-            W = self.W_notheta
-            preTrace = self.preTrace_notheta
-            postTrace = self.postTrace_notheta
-            lastSpikeTime = self.lastSpikeTime_notheta
+        data = ( (state,                        self.W_notheta,  self.preTrace_notheta,  self.postTrace_notheta,  self.lastSpikeTime_notheta),
+                 (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
 
-
-        elif thetaModulation==True: #it usually will be
-            firingRate = self.thetaModulation(self.posToState(self.pos)) #phase precession modulates spatially dependent firing rate 
-            W = self.W
-            preTrace = self.preTrace
-            postTrace = self.postTrace
-            lastSpikeTime = self.lastSpikeTime
         
-        firingRate = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
-        n_spike_list = np.random.poisson(firingRate*dt)
-        
-        spikingNeurons = (n_spike_list != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
-        spikeTimes = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons]
-        spikeIDs = np.arange(self.nCells)[spikingNeurons]
-        spikeList = np.vstack((spikeIDs,spikeTimes)).T
-        spikeList = spikeList[np.argsort(spikeList[:,1])]   
+        for i, (firingRate, W, preTrace, postTrace, lastSpikeTime) in enumerate(data): 
+            firingRate_ = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
+            n_spike_list = np.random.poisson(firingRate_*dt)
+            
+            spikingNeurons = (n_spike_list != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
+            spikeTimes = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons]
+            spikeIDs = np.arange(self.nCells)[spikingNeurons]
+            spikeList = np.vstack((spikeIDs,spikeTimes)).T
+            spikeList = spikeList[np.argsort(spikeList[:,1])]   
 
-        for spikeInfo in spikeList:
-            cell, time = int(spikeInfo[0]), spikeInfo[1] 
-            timeDiff = time - lastSpikeTime 
-            preTrace *= np.exp(- timeDiff / self.tau_STDP) #traces for all cells decay...
-            postTrace *= np.exp(- timeDiff / (2*self.tau_STDP)) #traces for all cells decay...
-            W[cell,:] += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
-            W[:,cell] -= self.eta * postTrace * 0.5*self.postpreAsymmetry #weights to presynaptic neuron (should decrease when post fires) 
-            preTrace[cell] += 1 #update trace 
-            postTrace[cell] += 1 #update trace 
-            # weightsFromPost *= np.exp(-(time-lastSpikeTime)/decayTime)
-            # weightsToPost *= np.exp(-(time-lastSpikeTime)/decayTime)
-            lastSpikeTime = time 
+            for spikeInfo in spikeList:
+                cell, time = int(spikeInfo[0]), spikeInfo[1] 
+                timeDiff = time - lastSpikeTime 
 
-        if thetaModulation==False: #if you want to turn off theta 
-            self.lastSpikeTime_notheta = lastSpikeTime
-            self.spikeCount_notheta += len(spikeList)
-        elif thetaModulation==True: #if you want to turn off theta 
-            self.lastSpikeTime = lastSpikeTime
-            self.spikeCount += len(spikeList)
-        return firingRate
+                preTrace        *= np.exp(- timeDiff / self.tau_STDP) #traces for all cells decay...
+                postTrace       *= np.exp(- timeDiff / (self.tau_STDP_asymm * self.tau_STDP)) #traces for all cells decay...
+                W[cell,:]       += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
+                W[:,cell]       += self.eta * postTrace #weights to presynaptic neuron (should decrease when post fires) 
+                preTrace[cell]  += self.a_STDP #update trace 
+                postTrace[cell] += self.a_STDP * self.a_STDP_asymm #update trace (post trace probably negative)
+
+                lastSpikeTime = time 
+
+            if i == 0:
+                self.lastSpikeTime_notheta = lastSpikeTime
+                self.spikeCount_notheta += len(spikeList)
+            elif i == 1: 
+                self.lastSpikeTime = lastSpikeTime
+                self.spikeCount += len(spikeList)
+                thetaFiringRate = firingRate_
+
+        return thetaFiringRate
 
     
-    def thetaModulation(self, firingRate, position=None, direction=None,normalise=False):
+    def thetaModulation(self, firingRate, position=None, direction=None):
         """Takes a firing rate vector and modulates it to account for theta phase precession
 
         Args:
@@ -536,10 +527,7 @@ class MazeAgent():
         preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
 
         phaseDiff = preferedThetaPhase - self.thetaPhase
-        if normalise == True: 
-            modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) / scipy.stats.vonmises.pdf(0,kappa=self.kappa)
-        else: 
-            modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) * 2*np.pi
+        modulatedFiringRate = firingRate * vonmises.pdf(phaseDiff,kappa=self.kappa) * 2*np.pi
 
         return modulatedFiringRate
         
@@ -947,6 +935,27 @@ class MazeAgent():
         M_av,M_std = np.mean(M_copy,axis=0),np.std(M_copy,axis=0)
         M_av, M_std = M_av/np.max(M_av), M_std/np.max(M_std)
         return M_av, M_std
+    
+    def getMetrics(self,time=None):
+        if time is not None: 
+            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
+            snapshot = self.snapshots.iloc[hist_id]
+        else:
+            snapshot = self.snapshots.iloc[-1]
+
+        W = rowAlignMatrix(snapshot['W'].copy())
+        W_notheta = rowAlignMatrix(snapshot['W_notheta'].copy())
+        M = rowAlignMatrix(self.snapshots.iloc[-1]['M'].copy())
+
+
+        R_W = R2(W,M)              
+        R_Wnotheta = R2(W_notheta,M)  
+        SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0))
+        SNR_Wnotheta = (np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0))
+        
+        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta
+
+
 
     
         
@@ -1493,8 +1502,6 @@ class Visualiser():
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
         ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.7,linestyle='dotted')
 
-        comparison = comparisonMetrics(W_av,M_av,x)
-
         ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.3)
         ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.3)
         ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.15)
@@ -1530,7 +1537,7 @@ class Visualiser():
         ax[1].spines['top'].set_color('none')
 
         ax[0].legend(frameon=False)    
-        return fig, ax, comparison
+        return fig, ax
 
     def plotVarianceAndError(self):
         t         = []
@@ -1729,3 +1736,4 @@ def comparisonMetrics(y1,y2,x=None):
 
 def R2(y1, y2):
     return ((1/y1.size) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
+
