@@ -543,13 +543,13 @@ class MazeAgent():
             What it does with this info (bounce off wall, turn to follow wall, etc.) depends on policy. 
         """
 
-        dt = np.random.uniform(self.dt-0.01*self.dt,self.dt+0.01*self.dt)
+        dt = self.dt
         self.t += dt
         proposedNewPos = self.pos + self.speed * self.dir * dt
         proposedStep = np.array([self.pos,proposedNewPos])
 
-        if self.biasDoorCross == True: 
-            #if agent crosses into door zone there's a 100% change it 'crosses into the other room'
+        if (self.biasDoorCross == True) and (self.mazeType == 'twoRooms'): 
+            #if agent crosses into door zone there's its turn direction is biased to try and cross the door 
             #this is done by setting agents direction in the right direction and not changing it again until after it's crossed
             doorRegionSize = 1
             if self.doorPassage == False:
@@ -565,7 +565,7 @@ class MazeAgent():
                 if ((self.pos[0]<(self.roomSize)) != (proposedNewPos[0]<(self.roomSize))) or ((self.t - self.doorPassageTime)*self.speedScale > 2*doorRegionSize):
                     self.doorPassage = False
                     if ((self.pos[0]<(self.roomSize)) != (proposedNewPos[0]<(self.roomSize))): 
-                        print("crossed")
+                        print("crossed",self.t)
                     if ((self.t - self.doorPassageTime)*self.speedScale > 2*doorRegionSize):
                         print("time")
         
@@ -607,6 +607,8 @@ class MazeAgent():
                     else: randTurnMean = self.rotSpeedScale/16
                 randomTurnSpeed = np.random.normal(randTurnMean,self.rotSpeedScale)
                 self.dir = turn(self.dir,turnAngle=randomTurnSpeed*dt)
+                print(randomTurnSpeed*dt)
+
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
@@ -740,7 +742,7 @@ class MazeAgent():
 
         return self.mazeState['walls']
 
-    def checkWallIntercepts(self,proposedStep): #proposedStep = [pos,proposedNextPos]
+    def checkWallIntercepts(self,proposedStep,collisionDistance=0.1): #proposedStep = [pos,proposedNextPos]
         """Given the cuurent proposed step [currentPos, nextPos] it calculates whether a collision with any of the walls exists along this step.
         There are three possibilities from most worrying to least:
             • there is a collision ON the current step. Do something immediately.
@@ -786,7 +788,7 @@ class MazeAgent():
                     continue
 
                 if (lam_s > 1) and (0 <= lam_w <= 1):
-                    if lam_s * stepLength <= 0.03: #if the future collision is under 3cm away
+                    if lam_s * stepLength <= collisionDistance: #if the future collision is under collisionDistance away
                         futureCollisionList[0].append(wall)
                         futureCollisionList[1].append([lam_s,lam_w])
                         continue
@@ -938,7 +940,7 @@ class MazeAgent():
     
     def getMetrics(self,time=None):
         if time is not None: 
-            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
+            hist_id = self.snapshots['t'].sub(time).abs().to_numpy().argmin()
             snapshot = self.snapshots.iloc[hist_id]
         else:
             snapshot = self.snapshots.iloc[-1]
@@ -947,11 +949,12 @@ class MazeAgent():
         W_notheta = rowAlignMatrix(snapshot['W_notheta'].copy())
         M = rowAlignMatrix(self.snapshots.iloc[-1]['M'].copy())
 
+        mid = int(self.nCells / 2)
 
         R_W = R2(W,M)              
         R_Wnotheta = R2(W_notheta,M)  
-        SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0))
-        SNR_Wnotheta = (np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0))
+        SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)[mid-5:mid+5])
+        SNR_Wnotheta = (np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0)[mid-5:mid+5])
         
         return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta
 
@@ -1178,7 +1181,9 @@ class Visualiser():
         return fig, ax
     
     def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,color=None):
-        skiprate = int(0.015/(self.mazeAgent.speedScale * self.mazeAgent.dt))
+        skiprate = max(1,int(0.015/(self.mazeAgent.speedScale * self.mazeAgent.dt)))
+        skiprate = 1
+        print("forcing no skipping")
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
@@ -1191,7 +1196,9 @@ class Visualiser():
         return fig, ax
 
     
-    def plotM(self,hist_id=-1, M=None,fig=None,ax=None,save=True,savename="",title="",show=True,plotTimeStamp=False,colorbar=True,whichM='M',colormatchto='TD_M'):
+    def plotM(self,hist_id=-1, time=None, M=None,fig=None,ax=None,save=True,savename="",title="",show=True,plotTimeStamp=False,colorbar=True,whichM='M',colormatchto='TD_M'):
+        if time is not None: 
+            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
         snapshot = self.snapshots.iloc[hist_id]
         if (ax is not None) and (fig is not None): 
             ax.clear()
@@ -1489,7 +1496,7 @@ class Visualiser():
         roll = int(self.mazeAgent.nCells/2)
 
 
-        fig, ax = plt.subplots(2,1,figsize=(3,2))
+        fig, ax = plt.subplots(2,1,figsize=(2,2))
 
         # Rs_wav = comparisonMetrics(W_av,M_av,x)[0]
         # Rsq_wnothetaav = comparisonMetrics(W_notheta_av,M_av,x)[0]
@@ -1500,11 +1507,11 @@ class Visualiser():
         ax[1].plot(x,M_av,c='C0',linewidth=2)
         ax[0].plot(x,W_av,c='C1',label=r"$\theta$",linewidth=2)
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
-        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.7,linestyle='dotted')
+        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.7,linestyle='--', dashes=(1, 1))
 
-        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.3)
-        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.3)
-        ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.15)
+        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.1)
+        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.1)
+        ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.1)
         ax[0].set_yticks([])
         ax[1].set_yticks([])
         ax[0].set_xlim(min(x),max(x))
@@ -1559,58 +1566,54 @@ class Visualiser():
 
         for i in range(len(self.mazeAgent.snapshots)-1):
             snapshot = self.mazeAgent.snapshots.iloc[i]
-            time = snapshot['t']/60
-            if time >= 0.6:
-
-                W = rowAlignMatrix(snapshot['W'])
-                W_notheta = rowAlignMatrix(snapshot['W_notheta'])
-
-                W_max = np.mean(W.flatten()[np.argsort(W.flatten())[:10]])
-                W_notheta_max = np.mean(W_notheta.flatten()[np.argsort(W_notheta.flatten())[:10]])
-        
-                t.append(time)
-
-                W_snr.append((np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)))
-                W_notheta_snr.append((np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0)))
-
-                W_var.append(np.mean(np.var(W,axis=0)))
-                W_notheta_var.append(np.mean(np.var(W_notheta,axis=0)))
+            time = snapshot['t']
+            if time >= 31:
                 
-                W_err.append(np.linalg.norm(((W/W_max) - (M/M_max))/W.size))
-                W_notheta_err.append(np.linalg.norm(((W_notheta/W_notheta_max) - (M/M_max))/W.size))
-            
-                W_r2.append(R2(W,M))
-                W_notheta_r2.append(R2(W_notheta,M))
+                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta = self.mazeAgent.getMetrics(time=time)
+        
+                t.append(time/60)
 
-        fig, ax = plt.subplots(4,1,figsize=(3,5.5),sharex=True)
+                W_snr.append(SNR_W)
+                W_notheta_snr.append(SNR_Wnotheta)
+            
+                W_r2.append(R2_W)
+                W_notheta_r2.append(R2_Wnotheta)
+
+        fig, ax = plt.subplots(2,1,figsize=(1,2),sharex=True)
 
         ax[0].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
-        ax[0].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7,label=r"No $\theta$")
+        ax[0].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
 
-        ax[1].plot(t,W_var,c='C1',linewidth=2)
-        ax[1].plot(t,W_notheta_var,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+        ax[1].plot(t,W_r2,c='C1',linewidth=2)
+        ax[1].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
-        ax[2].plot(t,W_err,c='C1',linewidth=2)
-        ax[2].plot(t,W_notheta_err,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+        # ax[2].plot(t,W_err,c='C1',linewidth=2)
+        # ax[2].plot(t,W_notheta_err,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
 
-        ax[3].plot(t,W_r2,c='C1',linewidth=2)
-        ax[3].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+        # ax[3].plot(t,W_r2,c='C1',linewidth=2)
+        # ax[3].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
 
-        ax[0].set_ylim(bottom=0)
-        ax[1].set_ylim(bottom=0)
+        ax[0].set_ylim(bottom=0,top=max(W_snr)+0.15)
+        ax[1].set_ylim(bottom=0,top=1)
         # ax[2].set_ylim(bottom=0)
-        ax[3].set_ylim(bottom=0)
+        # ax[3].set_ylim(bottom=0)
 
-        ax[0].set_title("SNR")
-        ax[1].set_title("Variance")
-        ax[2].set_title("L2 Error")
-        ax[3].set_title("R2")
-
-        for i in range(4):
+        # ax[2].set_title("L2 Error")
+        # ax[3].set_title("R2")
+        ax[0].set_xticks([0,15,30])
+        ax[0].set_xticklabels(["","",""])
+        ax[1].set_xticks([0,15,30])
+        ax[1].set_xticklabels(["","",""])
+        ax[0].tick_params(width=2,color='darkgrey')
+        ax[1].tick_params(width=2,color='darkgrey')
+        ax[0].set_yticks([0,3,6])
+        ax[0].set_yticklabels(["","",""])
+        ax[1].set_yticks([0,0.5,1])
+        ax[1].set_yticklabels(["","","",""])
+        for i in range(2):
         # ax[1].set_yticks([])
         # ax[0].set_xlim(0,max(x))
         # ax[0].set_ylim(min(W_av-W_std),max(W_av+W_std))
-        # ax[0].set_xticks([-2,0,1,2])
         # ax[0].set_xticklabels(['','','','',''])
         # ax[0].tick_params(width=2,color='darkgrey')
         # ax[1].tick_params(width=2,color='darkgrey')
@@ -1625,8 +1628,7 @@ class Visualiser():
             ax[i].spines['bottom'].set_linewidth(2)
             ax[i].spines['top'].set_color('none')
 
-        ax[0].legend()
-        ax[3].set_xlabel("Exploration time")
+        # ax[0].legend(frameon=False)
 
         return fig, ax
 
@@ -1638,18 +1640,39 @@ class Visualiser():
     def fitEllipse(self,image, threshold=0.75):
         im = np.maximum(image - np.max(image)*threshold,0)
         gradgrad = np.linalg.norm(np.array(np.gradient(np.linalg.norm(np.array(np.gradient(im)),axis=0))),axis=0)
-        boundary = np.maximum(gradgrad-np.max(gradgrad)*0.2,0)>0
+        boundary = np.maximum(gradgrad-np.max(gradgrad)*0.4,0)>0
         coords = self.mazeAgent.discreteCoords
         coords, boundary = coords.reshape(-1,2), boundary.reshape(-1)
         coords = coords[boundary]
         x, y = coords[:,0],coords[:,1]
         X = np.stack((x**2,x*y,y**2,x,y)).T
-        Y = np.ones(X.shape[0])
-        W = np.matmul(np.linalg.inv(np.matmul(X.T,X)),np.matmul(X.T,Y)) #least squares fit ellipse Ax2 + Bxy + Cy2 + Dx + Ey = 1
+        F = 1
+        Y = F*np.ones(X.shape[0])
+        (A,B,C,D,E) = np.matmul(np.linalg.inv(np.matmul(X.T,X) + 0.0*np.identity(X.T.shape[0])),np.matmul(X.T,Y)) #least squares fit ellipse Ax2 + Bxy + Cy2 + Dx + Ey = F
+        print(A,B,C,D,E)
+        a_ = - np.sqrt(2*(A*E**2 +C*D**2 -B*D*E + (B**2 - 4*A*C)*-1)*(A+C+np.sqrt((A-C)**2 + B**2))) / (B**2 - 4*A*C)
+        b_ = - np.sqrt(2*(A*E**2 +C*D**2 -B*D*E + (B**2 - 4*A*C)*-1)*(A+C-np.sqrt((A-C)**2 + B**2))) / (B**2 - 4*A*C)
+        a,b = max(a_,b_), min(a_,b_)
+        print(round(a,2),round(b,2),round(np.sqrt(1-(b/a)**2),4))
+        # A=-A
+        # B=-B
+        # C=-C
+        # D=-D
+        # E=-E
         x_coord = np.linspace(self.mazeAgent.extent[0],self.mazeAgent.extent[1],1000)
         y_coord = np.linspace(self.mazeAgent.extent[2],self.mazeAgent.extent[3],1000)   
         X_coord, Y_coord = np.meshgrid(x_coord, y_coord)
-        Z_coord = W[0] * X_coord ** 2 + W[1] * X_coord * Y_coord + W[2] * Y_coord**2 + W[3] * X_coord + W[4] * Y_coord 
+        Z_coord = A * X_coord ** 2 + B * X_coord * Y_coord + C * Y_coord**2 + D * X_coord + E * Y_coord 
+        #finally get eccentricity 
+        m = np.array([[A,   B/2,  D/2],
+                      [B/2, C,    E/2],
+                      [D/2, E/2,  F]])
+        if np.linalg.det(m) < 0:
+            eta = 1
+        else:
+            eta = -1
+        eccen = np.sqrt((2*np.sqrt((A-C)**2 + B**2))/(eta*(A+C)+np.sqrt((A-C)**2 + B**2)))
+        print("Eccentricity = %.3f" %eccen)
         return (X_coord, Y_coord, Z_coord)
 
 def rowAlignMatrix(M):
@@ -1735,5 +1758,48 @@ def comparisonMetrics(y1,y2,x=None):
     return (Rsquared, skill, area, L2)
 
 def R2(y1, y2):
+    """R squared between two arrays 
+
+    Args:
+        y1 (np.array()): array 1
+        y2 (np.array()): array 2
+
+    Returns:
+        float: R squared value between them 
+    """    
     return ((1/y1.size) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
 
+
+def meanStdSkew(X,Y):
+    """Finds the mean, standard deviation and skew of a function.
+    Specifically for a function where you have the domain, x, and the (unnorrmalised) height f(x) = y
+
+
+
+    Args:
+        X (np.array()): the domain / support
+        Y (np.array()): the function height 
+
+    Returns:
+        tuple (mean, std, skew) : to 3dp
+    """    
+    s_xy = 0
+    s_y  = 0
+    for (x,y) in zip(X,Y):
+        s_xy += x*y
+        s_y  += y 
+    mean = s_xy/s_y
+
+    s_var = 0
+    for (x,y) in zip(X,Y):
+        s_var += y*(x-mean)**2
+    var = s_var/s_y
+    std = var**0.5
+
+    s_skew = 0 
+    for (x,y) in zip(X,Y):
+        s_skew += y*((x-mean)/std)**3
+    skew = s_skew/s_y
+
+
+    return (round(mean,3), round(std,3), round(skew,3))
