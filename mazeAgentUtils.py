@@ -610,14 +610,13 @@ class MazeAgent():
             
             self.speed = np.random.rayleigh(self.speedScale)
             if self.t - self.lastTurnUpdate >= 0.1: #turn updating done at intervals independednt of dt or else many small turns cancel out but few big ones dont 
-                randomTurnMean = 0
+                randTurnMean = 0
                 if self.doorPassage == True: 
                         d_theta  = theta(self.dir) - theta(np.array([self.roomSize,self.roomSize/2]) - self.pos)
-                        if d_theta > 0: randTurnMean = -self.rotSpeedScale/16
-                        else: randTurnMean = self.rotSpeedScale/16
-                self.randomTurnSpeed = np.random.normal(randomTurnMean,self.rotSpeedScale)
+                        if d_theta > 0: randTurnMean = -self.rotSpeedScale
+                        else: randTurnMean = self.rotSpeedScale
+                self.randomTurnSpeed = np.random.normal(randTurnMean,self.rotSpeedScale)
                 self.lastTurnUpdate = self.t
-            else: 
             self.dir = turn(self.dir, turnAngle=self.randomTurnSpeed*dt)
 
         if self.movementPolicy == 'windowsScreensaver':
@@ -1184,8 +1183,6 @@ class Visualiser():
     
     def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,color=None):
         skiprate = max(1,int(0.015/(self.mazeAgent.speedScale * self.mazeAgent.dt)))
-        skiprate = 1
-        print("forcing no skipping")
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
@@ -1263,7 +1260,7 @@ class Visualiser():
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse=False):
+    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse_=False):
         #time in minutes
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
@@ -1286,8 +1283,8 @@ class Visualiser():
         placeFields = self.mazeAgent.getPlaceFields(M=M,threshold=threshold)
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
 
-        if fitEllipse == True: 
-            (X,Y,Z) = self.fitEllipse(placeFields[number])
+        if fitEllipse_ == True: 
+            (X,Y,Z),_ = fitEllipse(placeFields[number],coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
 
 
@@ -1300,15 +1297,15 @@ class Visualiser():
         return fig, ax
     
 
-    def plotReceptiveField(self, number=None, hist_id=-1, fig=None, ax=None, show=True, fitEllipse=False):
+    def plotReceptiveField(self, number=None, hist_id=-1, fig=None, ax=None, show=True, fitEllipse_=False):
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         if number == None: number = np.random.randint(0,self.mazeAgent.nCells-1)
         extent = self.mazeAgent.extent
         rf = self.mazeAgent.discreteStates[..., number]
         ax.imshow(rf,extent=extent,interpolation=None)
-        if fitEllipse == True: 
-            (X,Y,Z) = self.fitEllipse(rf)
+        if fitEllipse_ == True: 
+            (X,Y,Z),_= fitEllipse(rf,coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
         if show==False:
             plt.close(fig)
@@ -1511,9 +1508,9 @@ class Visualiser():
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
         ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.7,linestyle='--', dashes=(1, 1))
 
-        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.1)
-        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.1)
-        ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.1)
+        ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.2)
+        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.2)
+        ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.2)
         ax[0].set_yticks([])
         ax[1].set_yticks([])
         ax[0].set_xlim(min(x),max(x))
@@ -1635,47 +1632,44 @@ class Visualiser():
         return fig, ax
 
 
-        return
+def fitEllipse(image, threshold=0.75,coords=None):
+    """Takes an array (image) and fits an ellipse to it. 
+    It does this by thresholding it and then looking for edges looking for the edges in the array (by calculating second gradient) and then regressing these points against the formula Ax2 + Bxy + Cy2 + Dx + Ey = 1
 
+    Args:
+        image (np.array()): The image or array to which the 
+        threshold (float, optional): The relativethreshold upon whch the edges of the image will be defined. Defaults to 0.75.
+        coords (np.array(image.shape,2)): The underlying coordinates of the image . Defaults to None in which case tries to get them .
 
-
-    def fitEllipse(self,image, threshold=0.75):
-        im = np.maximum(image - np.max(image)*threshold,0)
-        gradgrad = np.linalg.norm(np.array(np.gradient(np.linalg.norm(np.array(np.gradient(im)),axis=0))),axis=0)
-        boundary = np.maximum(gradgrad-np.max(gradgrad)*0.4,0)>0
-        coords = self.mazeAgent.discreteCoords
-        coords, boundary = coords.reshape(-1,2), boundary.reshape(-1)
-        coords = coords[boundary]
-        x, y = coords[:,0],coords[:,1]
-        X = np.stack((x**2,x*y,y**2,x,y)).T
-        F = 1
-        Y = F*np.ones(X.shape[0])
-        (A,B,C,D,E) = np.matmul(np.linalg.inv(np.matmul(X.T,X) + 0.0*np.identity(X.T.shape[0])),np.matmul(X.T,Y)) #least squares fit ellipse Ax2 + Bxy + Cy2 + Dx + Ey = F
-        print(A,B,C,D,E)
-        a_ = - np.sqrt(2*(A*E**2 +C*D**2 -B*D*E + (B**2 - 4*A*C)*-1)*(A+C+np.sqrt((A-C)**2 + B**2))) / (B**2 - 4*A*C)
-        b_ = - np.sqrt(2*(A*E**2 +C*D**2 -B*D*E + (B**2 - 4*A*C)*-1)*(A+C-np.sqrt((A-C)**2 + B**2))) / (B**2 - 4*A*C)
-        a,b = max(a_,b_), min(a_,b_)
-        print(round(a,2),round(b,2),round(np.sqrt(1-(b/a)**2),4))
-        # A=-A
-        # B=-B
-        # C=-C
-        # D=-D
-        # E=-E
-        x_coord = np.linspace(self.mazeAgent.extent[0],self.mazeAgent.extent[1],1000)
-        y_coord = np.linspace(self.mazeAgent.extent[2],self.mazeAgent.extent[3],1000)   
-        X_coord, Y_coord = np.meshgrid(x_coord, y_coord)
-        Z_coord = A * X_coord ** 2 + B * X_coord * Y_coord + C * Y_coord**2 + D * X_coord + E * Y_coord 
-        #finally get eccentricity 
-        m = np.array([[A,   B/2,  D/2],
-                      [B/2, C,    E/2],
-                      [D/2, E/2,  F]])
-        if np.linalg.det(m) < 0:
-            eta = 1
-        else:
-            eta = -1
-        eccen = np.sqrt((2*np.sqrt((A-C)**2 + B**2))/(eta*(A+C)+np.sqrt((A-C)**2 + B**2)))
-        print("Eccentricity = %.3f" %eccen)
-        return (X_coord, Y_coord, Z_coord)
+    Returns:
+        tuple of arrays: the x, y and z coords of the ellipse function (can be contour plotted on top of image)
+    """        
+    im = np.maximum(image - np.max(image)*threshold,0)
+    gradgrad = np.linalg.norm(np.array(np.gradient(np.linalg.norm(np.array(np.gradient(im)),axis=0))),axis=0)
+    boundary = np.maximum(gradgrad-np.max(gradgrad)*0.4,0)>0
+    coords, boundary = coords.reshape(-1,2), boundary.reshape(-1)
+    coords = coords[boundary]
+    x, y = coords[:,0],coords[:,1]
+    X = np.stack((x**2,x*y,y**2,x,y)).T
+    F = 1
+    xmin,xmax,ymin,ymax=min(coords[...,0]),max(coords[...,0]),min(coords[...,1]),max(coords[...,1])
+    Y = F*np.ones(X.shape[0])
+    (A,B,C,D,E) = np.matmul(np.linalg.inv(np.matmul(X.T,X) + 0.0*np.identity(X.T.shape[0])),np.matmul(X.T,Y)) #least squares fit ellipse Ax2 + Bxy + Cy2 + Dx + Ey = F
+    x_coord = np.linspace(xmin,xmax,1000)
+    y_coord = np.linspace(ymin,ymax,1000)   
+    X_coord, Y_coord = np.meshgrid(x_coord, y_coord)
+    Z_coord = A * X_coord ** 2 + B * X_coord * Y_coord + C * Y_coord**2 + D * X_coord + E * Y_coord 
+    #finally get eccentricity 
+    m = np.array([[A,   B/2,  D/2],
+                    [B/2, C,    E/2],
+                    [D/2, E/2,  F]])
+    if np.linalg.det(m) < 0:
+        eta = 1
+    else:
+        eta = -1
+    eccen = np.sqrt((2*np.sqrt((A-C)**2 + B**2))/(eta*(A+C)+np.sqrt((A-C)**2 + B**2)))
+    print("Eccentricity = %.3f" %eccen)
+    return (X_coord, Y_coord, Z_coord), eccen
 
 def rowAlignMatrix(M):
     M_copy = M.copy()
@@ -1805,3 +1799,17 @@ def meanStdSkew(X,Y):
 
 
     return (round(mean,3), round(std,3), round(skew,3))
+
+def getCOM(array):
+    print(array.shape)
+    i_av, j_av = 0, 0
+    for i in range(array.shape[0]):
+        for j in range(array.shape[1]):
+            i_av += array[i,j]*i
+            j_av += array[i,j]*j
+    i_av /= np.sum(array)
+    j_av /= np.sum(array)
+    i_av = int(i_av)
+    j_av = int(j_av)
+    return (i_av,j_av)
+
