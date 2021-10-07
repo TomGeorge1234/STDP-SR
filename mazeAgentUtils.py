@@ -207,6 +207,8 @@ class MazeAgent():
             self.LRDecisionPending=True
         self.doorPassage = False
         self.doorPassageTime = 0
+        self.lastTurnUpdate = -1
+        self.randomTurnSpeed = 0
 
         #initialise basis cells and M (successor matrix)
         print("   initialising basis features for learning")
@@ -599,24 +601,24 @@ class MazeAgent():
         if self.movementPolicy == 'raudies':
             if checkResult[0] == 'noImmediateCollision':
                 self.pos = proposedNewPos
-                self.speed = np.random.rayleigh(self.speedScale)
-                randTurnMean = 0
-                if self.doorPassage == True: 
-                    d_theta  = theta(self.dir) - theta(np.array([self.roomSize,self.roomSize/2]) - self.pos)
-                    if d_theta > 0: randTurnMean = -self.rotSpeedScale/16
-                    else: randTurnMean = self.rotSpeedScale/16
-                randomTurnSpeed = np.random.normal(randTurnMean,self.rotSpeedScale)
-                self.dir = turn(self.dir,turnAngle=randomTurnSpeed*dt)
-                print(randomTurnSpeed*dt)
-
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
             if checkResult[0] == 'collisionAhead':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'follow')
-                randomTurnSpeed = np.random.normal(0,self.rotSpeedScale)
-                self.dir = turn(self.dir, turnAngle=randomTurnSpeed*dt)
+            
+            self.speed = np.random.rayleigh(self.speedScale)
+            if self.t - self.lastTurnUpdate >= 0.1: #turn updating done at intervals independednt of dt or else many small turns cancel out but few big ones dont 
+                randomTurnMean = 0
+                if self.doorPassage == True: 
+                        d_theta  = theta(self.dir) - theta(np.array([self.roomSize,self.roomSize/2]) - self.pos)
+                        if d_theta > 0: randTurnMean = -self.rotSpeedScale/16
+                        else: randTurnMean = self.rotSpeedScale/16
+                self.randomTurnSpeed = np.random.normal(randomTurnMean,self.rotSpeedScale)
+                self.lastTurnUpdate = self.t
+            else: 
+            self.dir = turn(self.dir, turnAngle=self.randomTurnSpeed*dt)
 
         if self.movementPolicy == 'windowsScreensaver':
             if checkResult[0] != 'collisionNow': 
