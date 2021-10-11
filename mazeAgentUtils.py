@@ -75,7 +75,7 @@ defaultParams = {
           'tau_STDP'            : 30e-3,      #rate trace decays
           'tau_STDP_asymm'      : 2,          # tau- = this * tau+ 
           'a_STDP'              : 1,          #pre-before-post potentiation factor 
-          'a_STDP_asymm'        : -0.45,       #post-before-pre potentiation factor = this * pre-before-post
+          'a_STDP_asymm'        : -0.9,       #post-before-pre potentiation factor = this * pre-before-post
           'eta'                 : 0.05,       #STDP learning rate
           'baselineFiringRate'  : 0,           #baseline firing rate for cells 
 
@@ -497,7 +497,7 @@ class MazeAgent():
                 W[cell,:]       += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
                 W[:,cell]       += self.eta * postTrace #weights to presynaptic neuron (should decrease when post fires) 
                 preTrace[cell]  += self.a_STDP #update trace 
-                postTrace[cell] += self.a_STDP * self.a_STDP_asymm #update trace (post trace probably negative)
+                postTrace[cell] += self.a_STDP * (self.a_STDP_asymm / self.tau_STDP_asymm) #update trace (post trace probably negative)
 
                 lastSpikeTime = time 
 
