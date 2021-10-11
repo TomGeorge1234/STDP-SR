@@ -1631,7 +1631,7 @@ class Visualiser():
         ax[0].set_yticks([0,3,6])
         ax[0].set_yticklabels(["","",""])
         ax[1].set_yticks([0,0.5,1])
-        ax[1].set_yticklabels(["","","",""])
+        ax[1].set_yticklabels(["","",""])
         for i in range(2):
         # ax[1].set_yticks([])
         # ax[0].set_xlim(0,max(x))
