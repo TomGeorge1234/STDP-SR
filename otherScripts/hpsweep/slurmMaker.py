@@ -34,8 +34,7 @@ with open("slurmScript.sh","a") as new:
         for t_stdp in T_STDP:
             for t_stdp_asymm in T_STDP_ASYMM:
                 for a_stdp_asymm in A_STDP_ASYMM:
-                    for f in F:
-                        new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f %s %s &" %(t_sr, t_stdp, t_stdp_asymm, a_stdp_asymm, f, str(K).replace(" ",""), str(FR).replace(" ","")))
-                        new.write("\n")
+                    new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %s %s %s &" %(t_sr, t_stdp, t_stdp_asymm, a_stdp_asymm, str(F).replace(" ",""), str(K).replace(" ",""), str(FR).replace(" ","")))
+                    new.write("\n")
     new.write("wait")
 
