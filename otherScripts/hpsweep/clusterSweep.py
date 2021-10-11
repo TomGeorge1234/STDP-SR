@@ -22,19 +22,19 @@ centres = np.vstack((xcen,ycen)).T
 
 #Default parameters for MazeAgent 
 
-if type t_sr != list:
+if type(t_sr) != list:
     t_sr = [t_sr]
-if type t_stdp != list:
+if type(t_stdp) != list:
     t_stdp = [t_stdp]
-if type t_stdp_asymm != list:
+if type(t_stdp_asymm) != list:
     t_stdp_asymm = [t_stdp_asymm]
-if type a_stdp_asymm != list:
+if type(a_stdp_asymm) != list:
     a_stdp_asymm = [a_stdp_asymm]
-if type f != list:
+if type(f) != list:
     f = [f]
-if type k != list:
+if type(k) != list:
     k = [k]
-if type fr != list:
+if type(fr) != list:
     fr = [fr]
 
 for t_sr in t_sr:
