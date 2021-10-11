@@ -85,7 +85,7 @@ for t_sr in t_sr:
                             
                             R_w, R_nw, SNR_w, SNR_nw = agent.getMetrics(time=30)
 
-                            data = [str(t_sr),str(t_stdp),str(t_stdp_asymm),str(a_stdp_asymm), str(f), str(k), str(fr), str(round(R_w),5)), str(round(R_nw),5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
+                            data = [str(t_sr),str(t_stdp),str(t_stdp_asymm),str(a_stdp_asymm), str(f), str(k), str(fr), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
                             with open("sweepResults.txt", "a") as f: 
                                 if sum(1 for line in open('sweepResults.txt')) == 0:
                                     f.write("t_sr,t_stdp,t_stdp_asymm,a_stdp_asymm,f,k,fr,R_w,R_nw,SNR_w,SNR_nw")
