@@ -1217,8 +1217,10 @@ class Visualiser():
 
         if colormatchto == 'TD_M': 
             M_colormatch = self.mazeAgent.M
-        elif colormatchto is not None:
-            M_colormatch = np.load(colormatchto)
+        elif colormatchto == 'W_onDiag': 
+            M_colormatch = self.mazeAgent.W_onDiag
+        # elif colormatchto is not None:
+        #     M_colormatch = np.load(colormatchto)
         else: 
             M_colormatch = np.array([-1,1])
 
@@ -1261,27 +1263,33 @@ class Visualiser():
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse_=False):
-        #time in minutes
-        if time is not None: 
-            hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
-        #if a figure/ax objects are passed, clear the axis and replot the maze
-        if (ax is not None) and (fig is not None): 
-            ax.clear()
-            self.plotMazeStructure(fig=fig, ax=ax, hist_id=hist_id)
-        # else if they are not passed plot the maze
-        if (fig, ax) == (None, None):
+    def plotPlaceField(self, M=None, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse_=False):
+        
+        if M is None: 
+            #time in minutes
+            if time is not None: 
+                hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
+            #if a figure/ax objects are passed, clear the axis and replot the maze
+            if (ax is not None) and (fig is not None): 
+                ax.clear()
+                self.plotMazeStructure(fig=fig, ax=ax, hist_id=hist_id)
+            # else if they are not passed plot the maze
+            if (fig, ax) == (None, None):
+                fig, ax = self.plotMazeStructure(hist_id=hist_id)
+            
+            if number == None: number = np.random.randint(0,self.mazeAgent.stateSize-1)
+            
+            snapshot = self.snapshots.iloc[hist_id]
+            M = snapshot['M']
+            if STDP==True: 
+                M = snapshot['W']
+            t = int(np.round(snapshot['t'] / 60))
+        else:
+            snapshot = self.snapshots.iloc[hist_id]
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
-        
-        if number == None: number = np.random.randint(0,self.mazeAgent.stateSize-1)
-        
-        snapshot = self.snapshots.iloc[hist_id]
-        M = snapshot['M']
-        if STDP==True: 
-            M = snapshot['W']
-        t = int(np.round(snapshot['t'] / 60))
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M,threshold=threshold)
+        print(placeFields.shape)
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
 
         if fitEllipse_ == True: 
