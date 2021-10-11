@@ -12,7 +12,6 @@ f            = ast.literal_eval(sys.argv[5])
 k            = ast.literal_eval(sys.argv[6])
 fr           = ast.literal_eval(sys.argv[7])
 
-print(t_sr,t_stdp,t_stdp_asymm,a_stdp,f,k,fr)
 
 N=50
 xcen = np.linspace(0,5,N+1)[:-1]
@@ -66,7 +65,7 @@ for t_sr in t_sr:
                                 #STDP params
                                 'tau_STDP'            : t_stdp,      #rate trace decays
                                 'tau_STDP_asymm'      : t_stdp_asymm,          # tau- = this * tau+ 
-                                'a_STDP_asymm'        : a_stdp_asymm_,       #post-before-pre potentiation factor = this * pre-before-post
+                                'a_STDP_asymm'        : a_stdp_asymm,       #post-before-pre potentiation factor = this * pre-before-post
 
                                 #Theta precession params
                                 'precessFraction'     : f,        #fraction of 2pi the prefered phase moves through
