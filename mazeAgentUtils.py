@@ -14,6 +14,7 @@ import scipy
 from scipy.stats import vonmises
 from scipy.spatial import distance_matrix
 import time as Time 
+import dill 
 
 import matplotlib
 import matplotlib.pyplot as plt 
@@ -1287,6 +1288,14 @@ class Visualiser():
             (X,Y,Z),_ = fitEllipse(placeFields[number],coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
 
+        
+        if self.mazeAgent.mazeType == 'loop':
+            x = self.mazeAgent.discreteCoords[10,:,0]
+            print("Place field     (peak, mean, std, skew) =",peakMeanStdSkew(x,placeFields[number][10,:]))
+
+        peakid= np.argmax(placeFields[number])
+        peakcoord = self.mazeAgent.discreteCoords.reshape(-1,2)[peakid]
+        ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,edgecolors='darkgrey',alpha=1)
 
         if plotTimeStamp == True: 
             ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
@@ -1304,6 +1313,12 @@ class Visualiser():
         extent = self.mazeAgent.extent
         rf = self.mazeAgent.discreteStates[..., number]
         ax.imshow(rf,extent=extent,interpolation=None)
+        peakid= np.argmax(rf)
+        peakcoord = self.mazeAgent.discreteCoords.reshape(-1,2)[peakid]
+        ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,edgecolors='darkgrey',alpha=1)
+        if self.mazeAgent.mazeType == 'loop':
+            x = self.mazeAgent.discreteCoords[10,:,0]
+            print("Receptive field (peak, mean, std, skew) =",peakMeanStdSkew(x,rf[10,:]))
         if fitEllipse_ == True: 
             (X,Y,Z),_= fitEllipse(rf,coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
@@ -1632,9 +1647,9 @@ class Visualiser():
         return fig, ax
 
 
-def fitEllipse(image, threshold=0.75,coords=None):
+def fitEllipse(image, threshold=0.5,coords=None,verbose=True):
     """Takes an array (image) and fits an ellipse to it. 
-    It does this by thresholding it and then looking for edges looking for the edges in the array (by calculating second gradient) and then regressing these points against the formula Ax2 + Bxy + Cy2 + Dx + Ey = 1
+    It does this by finding contours then regressing these points against the formula Ax2 + Bxy + Cy2 + Dx + Ey = 1
 
     Args:
         image (np.array()): The image or array to which the 
@@ -1643,16 +1658,16 @@ def fitEllipse(image, threshold=0.75,coords=None):
 
     Returns:
         tuple of arrays: the x, y and z coords of the ellipse function (can be contour plotted on top of image)
-    """        
-    im = np.maximum(image - np.max(image)*threshold,0)
-    gradgrad = np.linalg.norm(np.array(np.gradient(np.linalg.norm(np.array(np.gradient(im)),axis=0))),axis=0)
-    boundary = np.maximum(gradgrad-np.max(gradgrad)*0.4,0)>0
-    coords, boundary = coords.reshape(-1,2), boundary.reshape(-1)
-    coords = coords[boundary]
-    x, y = coords[:,0],coords[:,1]
+    """ 
+
+    fig2, ax2 = plt.subplots()
+    cs = ax2.contour(coords[...,0],coords[...,1],image,np.array([threshold*max(image.flatten())])).collections[0].get_paths()[0].vertices
+    plt.close()
+    x,y = cs[:,0], cs[:,1]
     X = np.stack((x**2,x*y,y**2,x,y)).T
     F = 1
-    xmin,xmax,ymin,ymax=min(coords[...,0]),max(coords[...,0]),min(coords[...,1]),max(coords[...,1])
+    coords_ = coords.reshape(-1,2)
+    xmin,xmax,ymin,ymax=min(coords_[:,0]),max(coords_[:,0]),min(coords_[:,1]),max(coords_[:,1])
     Y = F*np.ones(X.shape[0])
     (A,B,C,D,E) = np.matmul(np.linalg.inv(np.matmul(X.T,X) + 0.0*np.identity(X.T.shape[0])),np.matmul(X.T,Y)) #least squares fit ellipse Ax2 + Bxy + Cy2 + Dx + Ey = F
     x_coord = np.linspace(xmin,xmax,1000)
@@ -1668,7 +1683,9 @@ def fitEllipse(image, threshold=0.75,coords=None):
     else:
         eta = -1
     eccen = np.sqrt((2*np.sqrt((A-C)**2 + B**2))/(eta*(A+C)+np.sqrt((A-C)**2 + B**2)))
-    print("Eccentricity = %.3f" %eccen)
+    if verbose == True:
+        print("Eccentricity = %.3f" %eccen)
+
     return (X_coord, Y_coord, Z_coord), eccen
 
 def rowAlignMatrix(M):
@@ -1677,7 +1694,6 @@ def rowAlignMatrix(M):
     for i in range(M.shape[0]):
         M_copy[i,:] = np.roll(M[i,:],-i+roll)
     return M_copy
-
 
 def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None,figureDirectory="../figures/"):
     """saves figure to file, by data (folder) and time (name) 
@@ -1709,7 +1725,6 @@ def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None
 
     return path
 
-
 def pickleAndSave(class_,name,saveDir='../savedObjects/'):
 	"""pickles and saves a class
 	this is not an efficient way to save the data, but it is easy 
@@ -1721,7 +1736,7 @@ def pickleAndSave(class_,name,saveDir='../savedObjects/'):
 		saveDir (str, optional): Directory to save into. Defaults to './savedItems/'.
 	"""	
 	with open(saveDir + name+'.pkl', 'wb') as output:
-		pickle.dump(class_, output, pickle.HIGHEST_PROTOCOL)
+		dill.dump(class_, output)
 	return 
 
 def loadAndDepickle(name, saveDir='../savedObjects/'):
@@ -1733,7 +1748,7 @@ def loadAndDepickle(name, saveDir='../savedObjects/'):
 		class: the class/model
 	"""	
 	with open(saveDir + name+'.pkl', 'rb') as input:
-		item = pickle.load(input)
+		item = dill.load(input)
 	return item
 
 def comparisonMetrics(y1,y2,x=None):
@@ -1766,7 +1781,7 @@ def R2(y1, y2):
     return ((1/y1.size) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
 
 
-def meanStdSkew(X,Y):
+def peakMeanStdSkew(X,Y):
     """Finds the mean, standard deviation and skew of a function.
     Specifically for a function where you have the domain, x, and the (unnorrmalised) height f(x) = y
 
@@ -1779,6 +1794,9 @@ def meanStdSkew(X,Y):
     Returns:
         tuple (mean, std, skew) : to 3dp
     """    
+
+    peak = X[np.argmax(Y)]
+
     s_xy = 0
     s_y  = 0
     for (x,y) in zip(X,Y):
@@ -1798,7 +1816,7 @@ def meanStdSkew(X,Y):
     skew = s_skew/s_y
 
 
-    return (round(mean,3), round(std,3), round(skew,3))
+    return (round(peak,3), round(mean,3), round(std,3), round(skew,3))
 
 def getCOM(array):
     print(array.shape)
