@@ -1,0 +1,352 @@
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node11: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node11: task 0: Exited with exit code 1
+srun: error: enc1-node11: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node14: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node13: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node5: task 0: Exited with exit code 1
+srun: error: enc1-node13: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node13: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node5: task 0: Exited with exit code 1
+srun: error: enc1-node14: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node11: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node14: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node13: task 0: Exited with exit code 1
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node14: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node13: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node11: task 0: Exited with exit code 1
+srun: error: enc1-node14: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc2-node12: task 0: Exited with exit code 1
+srun: error: enc2-node11: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node4: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node9: task 0: Exited with exit code 1
+srun: error: enc2-node12: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 76, in <module>
+    agent.runRat(trainTime=30)
+  File "../../mazeAgentUtils.py", line 353, in runRat
+    hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+  File "../../mazeAgentUtils.py", line 478, in STDPLearningStep
+    (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+  File "../../mazeAgentUtils.py", line 530, in thetaModulation
+    preferedThetaPhase = np.pi + sigmasToCellMidline * self.precessFraction * np.pi
+TypeError: unsupported operand type(s) for *: 'float' and '_io.TextIOWrapper'
+srun: error: enc1-node10: task 0: Exited with exit code 1

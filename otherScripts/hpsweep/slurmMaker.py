@@ -2,13 +2,13 @@ import subprocess
 import numpy as np 
 subprocess.run("rm slurmScript.sh", shell=True)
 
-T_SR = [3,4,5,10]
-T_STDP = [10e-3,20e-3,25e-3,30e-3]
-T_STDP_ASYMM = [1,1.5,2,2.5]
-A_STDP_ASYMM = [-0.8,-0.9,-1,-1.1]
-F = [0.4,0.6,0.8,1]
-K = [0.5,1,1.5,2]
-FR = [1,5,20,50]
+T_SR = [2,4,8]
+T_STDP = [5e-3,20e-3,50e-3]
+T_STDP_ASYMM = [1,2,3]
+A_STDP_ASYMM = [-0.6,-0.8,-1]
+F = [0.6,0.8,1]
+K = [0.5,1,2]
+FR = [1,5,20]
 
 
 n_tasks = len(T_SR)*len(T_STDP)*len(T_STDP_ASYMM)*len(A_STDP_ASYMM)#*len(F)*len(K)*len(FR)

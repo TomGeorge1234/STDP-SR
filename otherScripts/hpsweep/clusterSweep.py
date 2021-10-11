@@ -36,6 +36,8 @@ if type(k) != list:
 if type(fr) != list:
     fr = [fr]
 
+
+
 for t_sr in t_sr:
     for t_stdp in t_stdp:
         for t_stdp_asymm in t_stdp_asymm:
@@ -43,7 +45,13 @@ for t_sr in t_sr:
                 for f in f:
                     for k in k:
                         for fr in fr:
-    
+                            print(t_sr)
+                            print(t_stdp)
+                            print(t_stdp_asymm)
+                            print(a_stdp_asymm)
+                            print(f)
+                            print(k)
+                            print(fr)
                             params = { 
 
                                 #Maze params 
@@ -51,8 +59,8 @@ for t_sr in t_sr:
                                 'stateType'           : 'gaussianThreshold', #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
                                 'movementPolicy'      : 'windowsScreensaver',  #movement policy (raudies, random walk, windows screensaver)
                                 'roomSize'            : 5,          #maze size scaling parameter, metres
-                                'dt'                  : 0.005,       #simulation time disretisation 
-                                'dx'                  : 0.01,       #space discretisation (for plotting, movement is continuous)
+                                'dt'                  : 0.01,       #simulation time disretisation 
+                                'dx'                  : 0.02,       #space discretisation (for plotting, movement is continuous)
                                 'initPos'             : [0.1,0.1],  #initial position [x0, y0], metres
                                 'centres'             : centres,       #array of receptive field positions. Overwrites nCells
                                 'sigma'               : 1,          #basis cell width scale (irrelevant for onehots)
@@ -73,7 +81,7 @@ for t_sr in t_sr:
                                 }
 
                             agent =  MazeAgent(params)
-                            agent.runRat(trainTime=1)
+                            agent.runRat(trainTime=3)
                             plotter = Visualiser(agent)
 
                             fig, ax = plotter.plotMAveraged(time=30)
@@ -85,9 +93,9 @@ for t_sr in t_sr:
                             R_w, R_nw, SNR_w, SNR_nw = agent.getMetrics(time=30)
 
                             data = [str(t_sr),str(t_stdp),str(t_stdp_asymm),str(a_stdp_asymm), str(f), str(k), str(fr), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
-                            with open("sweepResults.txt", "a") as f: 
+                            with open("sweepResults.txt", "a") as file: 
                                 if sum(1 for line in open('sweepResults.txt')) == 0:
-                                    f.write("t_sr,t_stdp,t_stdp_asymm,a_stdp_asymm,f,k,fr,R_w,R_nw,SNR_w,SNR_nw")
-                                    f.write("\n")
-                                f.write('_s,'.join(data))
-                                f.write('\n')
+                                    file.write("t_sr,t_stdp,t_stdp_asymm,a_stdp_asymm,f,k,fr,R_w,R_nw,SNR_w,SNR_nw")
+                                    file.write("\n")
+                                file.write('_s,'.join(data))
+                                file.write('\n')
