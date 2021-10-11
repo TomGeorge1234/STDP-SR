@@ -11,7 +11,7 @@ K = [0.5,1,1.5,2]
 FR = [1,5,20,50]
 
 
-n_tasks = len(T_SR)*len(T_STDP)*len(T_STDP_ASYMM)*len(A_STDP_ASYMM)*len(F) #*len(K)*len(FR)
+n_tasks = len(T_SR)*len(T_STDP)*len(T_STDP_ASYMM)*len(A_STDP_ASYMM)#*len(F)*len(K)*len(FR)
 print("%g scripts total" %n_tasks)
 
 pre_schpeel = [
