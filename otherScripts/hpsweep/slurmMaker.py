@@ -2,13 +2,21 @@ import subprocess
 import numpy as np 
 subprocess.run("rm slurmScript.sh", shell=True)
 
+# T_SR = [4]
+# T_STDP_PLUS  = [10e-3,20e-3,30e-3,40e-3,50e-3,100e-3]
+# T_STDP_MINUS = [10e-3,20e-3,30e-3,40e-3,50e-3,100e-3]
+# A_STDP = [-0.1,-0.2,-0.4,-0.6,-0.8,-1]
+# F = [0.5]
+# K = [1]
+# FR = [1,3,5,10,20,50]
+
 T_SR = [4]
-T_STDP_PLUS  = [10e-3,20e-3,30e-3,40e-3,50e-3,100e-3]
-T_STDP_MINUS = [10e-3,20e-3,30e-3,40e-3,50e-3,100e-3]
-A_STDP = [-0.1,-0.2,-0.4,-0.6,-0.8,-1]
+T_STDP_PLUS  = [10e-3,20e-3]
+T_STDP_MINUS = [10e-3,20e-3]
+A_STDP = [-0.1,-0.2]
 F = [0.5]
 K = [1]
-FR = [1,3,5,10,20,50]
+FR = [1,3]
 
 n_tasks = len(T_SR)*len(T_STDP_PLUS)*len(T_STDP_MINUS)*len(A_STDP)*len(F)*len(K)#*len(FR)
 print("%g scripts total" %n_tasks)
