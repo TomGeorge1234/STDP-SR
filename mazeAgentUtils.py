@@ -962,22 +962,18 @@ class MazeAgent():
         SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)[mid-5:mid+5])
         SNR_Wnotheta = (np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0)[mid-5:mid+5])
 
-        W_flat = np.mean(W,axis=0)/np.sum(np.mean(W,axis=0))
-        Wnotheta_flat = np.mean(W_notheta,axis=0)/np.sum(np.mean(W_notheta,axis=0))
-        M_flat = np.mean(M,axis=0)/np.sum(np.mean(M,axis=0))
-       
-        try:
-            skew_W = fitSkew(x,W_flat)
-        except RuntimeError:
-            skew_W = np.NaN
-        try:
-            skew_Wnotheta = fitSkew(x,Wnotheta_flat)
-        except RuntimeError:
-            skew_Wnotheta = np.NaN
-        try:
-            skew_M = fitSkew(x,M_flat)
-        except RuntimeError:
-            skew_M = np.NaN
+        W_flat = np.mean(W,axis=0)/np.trapz(np.mean(W,axis=0),x)
+        W_flat /= np.max(W_flat)
+
+        Wnotheta_flat = np.mean(W_notheta,axis=0)/np.trapz(np.mean(W_notheta,axis=0),x)
+        Wnotheta_flat /= np.max(Wnotheta_flat)
+
+        M_flat = np.mean(M,axis=0)/np.trapz(np.mean(M,axis=0),x)
+        M_flat /= np.max(M_flat)
+
+        skew_W = fitSkew(x,W_flat)
+        skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+        skew_M = fitSkew(x,M_flat)
 
         return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M
 
@@ -1647,19 +1643,22 @@ class Visualiser():
         ax[0].set_xticklabels(["","",""])
         ax[1].set_xticks([0,15,30])
         ax[1].set_xticklabels(["","",""])
-        ax[2].set_xticks([0,15,30])
-        ax[2].set_xticklabels(["","",""])
+
         ax[0].tick_params(width=2,color='darkgrey')
         ax[1].tick_params(width=2,color='darkgrey')
-        ax[2].tick_params(width=2,color='darkgrey')
         ax[0].set_yticks([0,3,6])
         ax[0].set_yticklabels(["","",""])
         ax[1].set_yticks([0,0.5,1])
         ax[1].set_yticklabels(["","",""])
+
+        ax[2].set_xticks([0,15,30])
+        ax[2].set_xticklabels(["","",""])
         ax[2].set_yticks([0,skew_M])
         ax[2].set_yticklabels(["",""])
         ax[2].set_ylim(bottom = 1.5*skew_M)
         ax[2].axhline(y=skew_M,c='C0',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
+        ax[2].tick_params(width=2,color='darkgrey')
+
 
         for i in range(3):
 
@@ -1862,9 +1861,10 @@ def getCOM(array):
     return (i_av,j_av)
 
 
-def skewnorm(x,skew,loc,scale):
-    return scipy.stats.skewnorm.pdf(x,skew,loc,scale)
+def skewnorm(x,a,loc,scale): #see scipy docs
+    return scipy.stats.skewnorm.pdf(x,a=a,loc=loc,scale=scale)
 
 def fitSkew(x,y):
-    popt, _ = scipy.optimize.curve_fit(skewnorm,x,y)
-    return popt[0] 
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+    _,_,skewness,_ = scipy.stats.skewnorm.stats(a, moments='mvsk')
+    return skewness
