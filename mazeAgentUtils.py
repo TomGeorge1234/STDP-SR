@@ -949,6 +949,8 @@ class MazeAgent():
         else:
             snapshot = self.snapshots.iloc[-1]
 
+        x = self.centres[:,0].copy()
+
         W = rowAlignMatrix(snapshot['W'].copy())
         W_notheta = rowAlignMatrix(snapshot['W_notheta'].copy())
         M = rowAlignMatrix(self.snapshots.iloc[-1]['M'].copy())
@@ -959,8 +961,25 @@ class MazeAgent():
         R_Wnotheta = R2(W_notheta,M)  
         SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)[mid-5:mid+5])
         SNR_Wnotheta = (np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0)[mid-5:mid+5])
-        
-        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta
+
+        W_flat = np.mean(W,axis=0)/np.sum(np.mean(W,axis=0))
+        Wnotheta_flat = np.mean(W_notheta,axis=0)/np.sum(np.mean(W_notheta,axis=0))
+        M_flat = np.mean(M,axis=0)/np.sum(np.mean(M,axis=0))
+       
+        try:
+            skew_W = fitSkew(x,W_flat)
+        except RuntimeError:
+            skew_W = np.NaN
+        try:
+            skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+        except RuntimeError:
+            skew_Wnotheta = np.NaN
+        try:
+            skew_M = fitSkew(x,M_flat)
+        except RuntimeError:
+            skew_M = np.NaN
+
+        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M
 
 
 
@@ -1573,27 +1592,25 @@ class Visualiser():
     def plotVarianceAndError(self):
         t         = []
 
-        W_var         = [] 
-        W_notheta_var = []
-
         W_snr         = [] 
         W_notheta_snr = []
-
-        W_err         = [] 
-        W_notheta_err = []
 
         W_r2 = []
         W_notheta_r2  = []
 
+        W_skew = []
+        W_notheta_skew = []
+
+        x = self.mazeAgent.centres[:,0]
+
         M = rowAlignMatrix(self.mazeAgent.snapshots.iloc[-1]['M'])
-        M_max = np.mean(M.flatten()[np.argsort(M.flatten())[:10]])
 
         for i in range(len(self.mazeAgent.snapshots)-1):
             snapshot = self.mazeAgent.snapshots.iloc[i]
             time = snapshot['t']
             if time >= 31:
                 
-                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta = self.mazeAgent.getMetrics(time=time)
+                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_no_theta,  = self.mazeAgent.getMetrics(time=time)
         
                 t.append(time/60)
 
@@ -1603,7 +1620,14 @@ class Visualiser():
                 W_r2.append(R2_W)
                 W_notheta_r2.append(R2_Wnotheta)
 
-        fig, ax = plt.subplots(2,1,figsize=(1,2),sharex=True)
+                W_skew.append(skew_W)
+                W_notheta_skew.append(skew_no_theta)
+
+        M_flat = np.mean(M,axis=0)
+        M_flat /= np.sum(M_flat)
+        skew_M = fitSkew(x,M_flat)
+        
+        fig, ax = plt.subplots(3,1,figsize=(1,3),sharex=True)
 
         ax[0].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
         ax[0].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
@@ -1611,11 +1635,10 @@ class Visualiser():
         ax[1].plot(t,W_r2,c='C1',linewidth=2)
         ax[1].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
-        # ax[2].plot(t,W_err,c='C1',linewidth=2)
-        # ax[2].plot(t,W_notheta_err,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+        ax[2].plot(t,W_skew,c='C1',linewidth=2)
+        ax[2].plot(t,W_notheta_skew,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
-        # ax[3].plot(t,W_r2,c='C1',linewidth=2)
-        # ax[3].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='dotted',alpha=0.7)
+
 
         ax[0].set_ylim(bottom=0,top=max(W_snr)+0.15)
         ax[1].set_ylim(bottom=0,top=1)
@@ -1628,31 +1651,32 @@ class Visualiser():
         ax[0].set_xticklabels(["","",""])
         ax[1].set_xticks([0,15,30])
         ax[1].set_xticklabels(["","",""])
+        ax[2].set_xticks([0,15,30])
+        ax[2].set_xticklabels(["","",""])
         ax[0].tick_params(width=2,color='darkgrey')
         ax[1].tick_params(width=2,color='darkgrey')
+        ax[2].tick_params(width=2,color='darkgrey')
         ax[0].set_yticks([0,3,6])
         ax[0].set_yticklabels(["","",""])
         ax[1].set_yticks([0,0.5,1])
         ax[1].set_yticklabels(["","",""])
-        for i in range(2):
-        # ax[1].set_yticks([])
-        # ax[0].set_xlim(0,max(x))
-        # ax[0].set_ylim(min(W_av-W_std),max(W_av+W_std))
-        # ax[0].set_xticklabels(['','','','',''])
-        # ax[0].tick_params(width=2,color='darkgrey')
-        # ax[1].tick_params(width=2,color='darkgrey')
-        # plt.grid(False)
+        ax[2].set_yticks([0,skew_M])
+        ax[2].set_yticklabels(["",""])
+        ax[2].set_ylim(bottom = 1.5*skew_M)
+        ax[2].axhline(y=skew_M,c='C0',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
-            # ax[i].spines['left'].set_position('zero')
+        for i in range(3):
+
+            ax[i].spines['left'].set_position('zero')
             ax[i].spines['left'].set_color('darkgrey')
             ax[i].spines['left'].set_linewidth(2)
             ax[i].spines['right'].set_color('none')        
-            # ax[i].spines['bottom'].set_position('zero')
+            ax[i].spines['bottom'].set_position('zero')
             ax[i].spines['bottom'].set_color('darkgrey')
             ax[i].spines['bottom'].set_linewidth(2)
             ax[i].spines['top'].set_color('none')
 
-        # ax[0].legend(frameon=False)
+
 
         return fig, ax
 
@@ -1841,3 +1865,10 @@ def getCOM(array):
     j_av = int(j_av)
     return (i_av,j_av)
 
+
+def skewnorm(x,skew,loc,scale):
+    return scipy.stats.skewnorm.pdf(x,skew,loc,scale)
+
+def fitSkew(x,y):
+    popt, _ = scipy.optimize.curve_fit(skewnorm,x,y)
+    return popt[0] 
