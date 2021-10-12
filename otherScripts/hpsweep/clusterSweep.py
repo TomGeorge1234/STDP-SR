@@ -6,8 +6,8 @@ import ast
 
 t_sr         = ast.literal_eval(sys.argv[1])
 t_stdp       = ast.literal_eval(sys.argv[2])
-t_stdp_asymm = ast.literal_eval(sys.argv[3])
-a_stdp_asymm = ast.literal_eval(sys.argv[4])
+t_stdp_minus = ast.literal_eval(sys.argv[3])
+a_stdp       = ast.literal_eval(sys.argv[4])
 f            = ast.literal_eval(sys.argv[5])
 k            = ast.literal_eval(sys.argv[6])
 fr           = ast.literal_eval(sys.argv[7])
@@ -23,12 +23,12 @@ centres = np.vstack((xcen,ycen)).T
 
 if type(t_sr) != list:
     t_sr = [t_sr]
-if type(t_stdp) != list:
-    t_stdp = [t_stdp]
-if type(t_stdp_asymm) != list:
-    t_stdp_asymm = [t_stdp_asymm]
-if type(a_stdp_asymm) != list:
-    a_stdp_asymm = [a_stdp_asymm]
+if type(t_stdp_plus) != list:
+    t_stdp_plus = [t_stdp_plus]
+if type(t_stdp_minus) != list:
+    t_stdp_minus = [t_stdp_minus]
+if type(a_stdp) != list:
+    a_stdp = [a_stdp]
 if type(f) != list:
     f = [f]
 if type(k) != list:
@@ -39,19 +39,13 @@ if type(fr) != list:
 
 
 for t_sr_ in t_sr:
-    for t_stdp_ in t_stdp:
-        for t_stdp_asymm_ in t_stdp_asymm:
-            for a_stdp_asymm_ in a_stdp_asymm:
+    for t_stdp_plus_ in t_stdp_plus:
+        for t_stdp_minus_ in t_stdp_minus:
+            for a_stdp_ in a_stdp:
                 for f_ in f:
                     for k_ in k:
                         for fr_ in fr:
-                            # print(t_sr)
-                            # print(t_stdp)
-                            # print(t_stdp_asymm)
-                            # print(a_stdp_asymm)
-                            # print(f)
-                            # print(k)
-                            # print(fr)
+
                             params = { 
 
                                 #Maze params 
@@ -71,9 +65,9 @@ for t_sr_ in t_sr:
                                 'peakFiringRate'      : fr_,          #peak firing rate of a cell (middle of place field, preferred theta phase)
                                 
                                 #STDP params
-                                'tau_STDP'            : t_stdp_,      #rate trace decays
-                                'tau_STDP_asymm'      : t_stdp_asymm_,          # tau- = this * tau+ 
-                                'a_STDP_asymm'        : a_stdp_asymm_,       #post-before-pre potentiation factor = this * pre-before-post
+                                'tau_STDP_plus'       : t_stdp_plus_, 
+                                'tau_STDP_minus'      : t_stdp_minus_, 
+                                'a_STDP'              : a_stdp_,       #post-before-pre potentiation factor = this * pre-before-post
 
                                 #Theta precession params
                                 'precessFraction'     : f_,        #fraction of 2pi the prefered phase moves through
@@ -81,21 +75,21 @@ for t_sr_ in t_sr:
                                 }
 
                             agent =  MazeAgent(params)
-                            agent.runRat(trainTime=30)
+                            agent.runRat(trainTime=1)
                             plotter = Visualiser(agent)
 
                             fig, ax = plotter.plotMAveraged(time=30)
-                            saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_),int(1000*t_stdp_asymm_),int(1000*a_stdp_asymm_),int(1000*f_),int(1000*k_)),figureDirectory="../../figures/")
+                            saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
 
                             fig1, ax1 = plotter.plotVarianceAndError()
-                            saveFigure(fig1,'Mvar',specialLocation='../../figures/clusterSweep/Mvar_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_),int(1000*t_stdp_asymm_),int(1000*a_stdp_asymm_),int(1000*f_),int(1000*k_)),figureDirectory="../../figures/")
+                            saveFigure(fig1,'Mvar',specialLocation='../../figures/clusterSweep/Mvar_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
                             
                             R_w, R_nw, SNR_w, SNR_nw = agent.getMetrics(time=30)
 
-                            data = [str(t_sr_),str(t_stdp_),str(t_stdp_asymm_),str(a_stdp_asymm_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
+                            data = [str(t_sr_),str(t_stdp_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
                             with open("sweepResults.txt", "a") as file: 
                                 if sum(1 for line in open('sweepResults.txt')) == 0:
-                                    file.write("t_sr,t_stdp,t_stdp_asymm,a_stdp_asymm,f,k,fr,R_w,R_nw,SNR_w,SNR_nw")
+                                    file.write("t_sr,t_stdp,t_stdp_minus,a_stdp,f,k,fr,R_w,R_nw,SNR_w,SNR_nw")
                                     file.write("\n")
-                                file.write('_s,'.join(data))
+                                file.write(','.join(data))
                                 file.write('\n')
