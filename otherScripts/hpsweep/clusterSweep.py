@@ -5,7 +5,7 @@ import ast
 
 
 t_sr         = ast.literal_eval(sys.argv[1])
-t_stdp       = ast.literal_eval(sys.argv[2])
+t_stdp_plus  = ast.literal_eval(sys.argv[2])
 t_stdp_minus = ast.literal_eval(sys.argv[3])
 a_stdp       = ast.literal_eval(sys.argv[4])
 f            = ast.literal_eval(sys.argv[5])
@@ -75,7 +75,7 @@ for t_sr_ in t_sr:
                                 }
 
                             agent =  MazeAgent(params)
-                            agent.runRat(trainTime=1)
+                            agent.runRat(trainTime=30)
                             plotter = Visualiser(agent)
 
                             fig, ax = plotter.plotMAveraged(time=30)
@@ -86,7 +86,7 @@ for t_sr_ in t_sr:
                             
                             R_w, R_nw, SNR_w, SNR_nw = agent.getMetrics(time=30)
 
-                            data = [str(t_sr_),str(t_stdp_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
+                            data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5))]
                             with open("sweepResults.txt", "a") as file: 
                                 if sum(1 for line in open('sweepResults.txt')) == 0:
                                     file.write("t_sr,t_stdp,t_stdp_minus,a_stdp,f,k,fr,R_w,R_nw,SNR_w,SNR_nw")

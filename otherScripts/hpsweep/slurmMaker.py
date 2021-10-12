@@ -8,10 +8,9 @@ T_STDP_MINUS = [10e-3,20e-3,30e-3,50e-3,100e-3]
 A_STDP = [-0.1,-0.2,-0.4,-0.6,-0.8,-1]
 F = [0.5]
 K = [1]
-FR = [1,3]
+FR = [1,3,5,20,50]
 
-
-n_tasks = len(T_SR)*len(T_STDP)*len(T_STDP_ASYMM)*len(A_STDP_ASYMM)*len(F)*len(K)#*len(FR)
+n_tasks = len(T_SR)*len(T_STDP_PLUS)*len(T_STDP_MINUS)*len(A_STDP)*len(F)*len(K)#*len(FR)
 print("%g scripts total" %n_tasks)
 
 pre_schpeel = [
@@ -31,11 +30,11 @@ with open("slurmScript.sh","a") as new:
         new.write(line)
 
     for t_sr in T_SR:
-        for t_stdp_plus in T_STDP:
-            for t_stdp_minus in T_STDP_ASYMM:
+        for t_stdp_plus in T_STDP_PLUS:
+            for t_stdp_minus in T_STDP_MINUS:
                 for a_stdp in A_STDP:
                     for f in F:
-                        for k in K:
+                        for k in K: 
                             new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f %f %s &" %(t_sr, t_stdp_plus, t_stdp_minus, a_stdp, f, k, str(FR).replace(" ","")))
                             new.write("\n")
     new.write("wait")
