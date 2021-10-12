@@ -81,7 +81,7 @@ for t_sr_ in t_sr:
                                 }
 
                             agent =  MazeAgent(params)
-                            agent.runRat(trainTime=3)
+                            agent.runRat(trainTime=30)
                             plotter = Visualiser(agent)
 
                             fig, ax = plotter.plotMAveraged(time=30)
