@@ -72,16 +72,16 @@ defaultParams = {
           
           #STDP params
           'peakFiringRate'      : 5,          #peak firing rate of a cell (middle of place field, preferred theta phase)
-          'tau_STDP_plus'       : 20e-3,      #rate trace decays
-          'tau_STDP_minus'      : 40e-3,      #rate trace decays
-          'a_STDP'              : -0.4,          #pre-before-post potentiation factor 
+          'tau_STDP_plus'       : 20e-3,      #pre trace decay time
+          'tau_STDP_minus'      : 40e-3,      #post trace decay time
+          'a_STDP'              : -0.4,       #pre-before-post potentiation factor (post-before-pre = 1) 
           'eta'                 : 0.05,       #STDP learning rate
-          'baselineFiringRate'  : 0,           #baseline firing rate for cells 
+          'baselineFiringRate'  : 0,          #baseline firing rate for cells 
 
 
           #Theta precession params
           'thetaFreq'           : 10,         #theta frequency
-          'precessFraction'     : 0.7,        #fraction of 2pi the prefered phase moves through
+          'precessFraction'     : 0.5,        #fraction of 2pi the prefered phase moves through
           'kappa'               : 1,          # von mises spread parameter
 
 }
@@ -491,12 +491,15 @@ class MazeAgent():
                 cell, time = int(spikeInfo[0]), spikeInfo[1] 
                 timeDiff = time - lastSpikeTime 
 
+
                 preTrace        *= np.exp(- timeDiff / self.tau_STDP_plus) #traces for all cells decay...
-                postTrace       *= np.exp(- timeDiff / (self.tau_STDP_minus)) #traces for all cells decay...
+                postTrace       *= np.exp(- timeDiff / self.tau_STDP_minus) #traces for all cells decay...
                 W[cell,:]       += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
                 W[:,cell]       += self.eta * postTrace #weights to presynaptic neuron (should decrease when post fires) 
-                preTrace[cell]  += self.a_STDP #update trace 
-                postTrace[cell] += self.a_STDP * self.a_STDP #update trace (post trace probably negative)
+                postTrace[cell] += self.a_STDP  #update trace (post trace probably negative)
+                preTrace[cell]  += 1 #update trace 
+
+
 
                 lastSpikeTime = time 
 
