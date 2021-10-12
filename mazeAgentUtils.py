@@ -1610,7 +1610,7 @@ class Visualiser():
             time = snapshot['t']
             if time >= 31:
                 
-                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_no_theta,  = self.mazeAgent.getMetrics(time=time)
+                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
         
                 t.append(time/60)
 
@@ -1621,11 +1621,7 @@ class Visualiser():
                 W_notheta_r2.append(R2_Wnotheta)
 
                 W_skew.append(skew_W)
-                W_notheta_skew.append(skew_no_theta)
-
-        M_flat = np.mean(M,axis=0)
-        M_flat /= np.sum(M_flat)
-        skew_M = fitSkew(x,M_flat)
+                W_notheta_skew.append(skew_Wnotheta)
         
         fig, ax = plt.subplots(3,1,figsize=(1,3),sharex=True)
 
