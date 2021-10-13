@@ -957,25 +957,33 @@ class MazeAgent():
 
         mid = int(self.nCells / 2)
 
+        #R2s
         R_W = R2(W,M)              
         R_Wnotheta = R2(W_notheta,M)  
+
+        #SNRs
         SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)[mid-5:mid+5])
         SNR_Wnotheta = (np.max(np.mean(W_notheta,axis=0)) - np.min(np.mean(W_notheta,axis=0))) / np.mean(np.std(W_notheta,axis=0)[mid-5:mid+5])
 
+        #skews
         W_flat = np.mean(W,axis=0)/np.trapz(np.mean(W,axis=0),x)
         W_flat /= np.max(W_flat)
-
         Wnotheta_flat = np.mean(W_notheta,axis=0)/np.trapz(np.mean(W_notheta,axis=0),x)
         Wnotheta_flat /= np.max(Wnotheta_flat)
-
         M_flat = np.mean(M,axis=0)/np.trapz(np.mean(M,axis=0),x)
         M_flat /= np.max(M_flat)
+        try: skew_W = fitSkew(x,W_flat)
+        except RuntimeError: skew_W = np.NaN
+        try: skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+        except RuntimeError: skew_Wnotheta = np.NaN
+        try: skew_M = fitSkew(x,M_flat)
+        except RuntimeError: skew_M = np.NaN
 
-        skew_W = fitSkew(x,W_flat)
-        skew_Wnotheta = fitSkew(x,Wnotheta_flat)
-        skew_M = fitSkew(x,M_flat)
-
-        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M
+        #peaks 
+        peak_W = x[np.argmax(W_flat)] - 2.5
+        peak_Wnotheta = x[np.argmax(Wnotheta_flat)] - 2.5
+        peak_M = x[np.argmax(M_flat)] - 2.5
+        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M, peak_W, peak_Wnotheta, peak_M
 
 
 
@@ -1606,7 +1614,7 @@ class Visualiser():
             time = snapshot['t']
             if time >= 31:
                 
-                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+                R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M, peak_W, peak_Wnotheta, peak_M = self.mazeAgent.getMetrics(time=time)
         
                 t.append(time/60)
 
@@ -1619,7 +1627,15 @@ class Visualiser():
                 W_skew.append(skew_W)
                 W_notheta_skew.append(skew_Wnotheta)
         
-        fig, ax = plt.subplots(3,1,figsize=(1,3),sharex=True)
+        snapshot = self.mazeAgent.snapshots.iloc[-1]
+        time = snapshot['t']
+        R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M, peak_W, peak_Wnotheta, peak_M = self.mazeAgent.getMetrics(time=time)
+        print("              R2        SNR        skew        peak ")
+        print("W             %.2f      %.2f       %.2f        %.2f " %(R2_W,SNR_W,skew_W,peak_W))
+        print("W (no theta)  %.2f      %.2f       %.2f        %.2f " %(R2_Wnotheta,SNR_Wnotheta,skew_Wnotheta,peak_Wnotheta))
+        print("M             -         -          %.2f        %.2f " %(skew_M,peak_M))
+
+        fig, ax = plt.subplots(2,1,figsize=(1,2),sharex=True)
 
         ax[0].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
         ax[0].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
@@ -1627,8 +1643,8 @@ class Visualiser():
         ax[1].plot(t,W_r2,c='C1',linewidth=2)
         ax[1].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
-        ax[2].plot(t,W_skew,c='C1',linewidth=2)
-        ax[2].plot(t,W_notheta_skew,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
+        # ax[2].plot(t,W_skew,c='C1',linewidth=2)
+        # ax[2].plot(t,W_notheta_skew,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
 
 
@@ -1651,16 +1667,16 @@ class Visualiser():
         ax[1].set_yticks([0,0.5,1])
         ax[1].set_yticklabels(["","",""])
 
-        ax[2].set_xticks([0,15,30])
-        ax[2].set_xticklabels(["","",""])
-        ax[2].set_yticks([0,skew_M])
-        ax[2].set_yticklabels(["",""])
-        ax[2].set_ylim(bottom = 1.5*skew_M)
-        ax[2].axhline(y=skew_M,c='C0',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
-        ax[2].tick_params(width=2,color='darkgrey')
+        # ax[2].set_xticks([0,15,30])
+        # ax[2].set_xticklabels(["","",""])
+        # ax[2].set_yticks([0,skew_M])
+        # ax[2].set_yticklabels(["",""])
+        # ax[2].set_ylim(bottom = 1.5*skew_M)
+        # ax[2].axhline(y=skew_M,c='C0',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
+        # ax[2].tick_params(width=2,color='darkgrey')
 
 
-        for i in range(3):
+        for i in range(2):
 
             ax[i].spines['left'].set_position('zero')
             ax[i].spines['left'].set_color('darkgrey')
