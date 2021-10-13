@@ -983,7 +983,8 @@ class MazeAgent():
         peak_W = x[np.argmax(W_flat)] - 2.5
         peak_Wnotheta = x[np.argmax(Wnotheta_flat)] - 2.5
         peak_M = x[np.argmax(M_flat)] - 2.5
-        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M, peak_W, peak_Wnotheta, peak_M
+        print(round(peak_M,5))
+        return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, float(skew_W), float(skew_Wnotheta), float(skew_M), peak_W, peak_Wnotheta, peak_M
 
 
 
