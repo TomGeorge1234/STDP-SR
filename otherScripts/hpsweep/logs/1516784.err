@@ -1,0 +1,28 @@
+srun: error: task 0 launch failed: Slurmd could not execve job
+srun: error: task 0 launch failed: Slurmd could not execve job
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 975, in getMetrics
+    skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc2-node12: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 975, in getMetrics
+    skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc2-node12: task 0: Exited with exit code 1

@@ -11,7 +11,7 @@ a_stdp       = ast.literal_eval(sys.argv[4])
 f            = ast.literal_eval(sys.argv[5])
 k            = ast.literal_eval(sys.argv[6])
 fr           = ast.literal_eval(sys.argv[7])
-
+traintime    = ast.literal_eval(sys.argv[8])
 
 N=50
 xcen = np.linspace(0,5,N+1)[:-1]
@@ -75,7 +75,7 @@ for t_sr_ in t_sr:
                                 }
 
                             agent =  MazeAgent(params)
-                            agent.runRat(trainTime=30)
+                            agent.runRat(trainTime=traintime)
                             plotter = Visualiser(agent)
 
                             fig, ax = plotter.plotMAveraged(time=30)
@@ -86,7 +86,7 @@ for t_sr_ in t_sr:
                             
                             R_w, R_nw, SNR_w, SNR_nw, skew_w, skew_nw, skew_m = agent.getMetrics(time=30)
 
-                            data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+                            data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(float(skew_w),5)), str(round(float(skew_nw),5)), str(round(float(skew_m),5))]
                             with open("sweepResults.txt", "a") as file: 
                                 if sum(1 for line in open('sweepResults.txt')) == 0:
                                     file.write("t_sr,t_stdp_plus,t_stdp_minus,a_stdp,f,k,fr,R_w,R_nw,SNR_w,SNR_nw,skew_w,skew_nw,skew_m")

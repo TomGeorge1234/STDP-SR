@@ -1,0 +1,13 @@
+srun: error: task 0 launch failed: Slurmd could not execve job
+srun: error: task 0 launch failed: Slurmd could not execve job
+Traceback (most recent call last):
+  File "clusterSweep.py", line 87, in <module>
+    R_w, R_nw, SNR_w, SNR_nw, skew_w, skew_nw, skew_m = agent.getMetrics(time=30)
+  File "../../mazeAgentUtils.py", line 975, in getMetrics
+    skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y,maxfev=2000)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 2000.
+srun: error: enc2-node12: task 0: Exited with exit code 1

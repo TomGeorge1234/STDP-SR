@@ -1,0 +1,43 @@
+n = np.linspace(0,5,N+1)[:-1]
+xcen += (xcen[1] - xcen[0]) / 2
+ycen = np.array([0.1]*N)
+centres = np.vstack((xcen,ycen)).T
+
+#Default parameters for MazeAgent 
+params = { 
+
+          #Maze params 
+          'mazeType'            : 'loop',  #type of maze, define in getMaze() function
+          'stateType'           : 'gaussianThreshold', #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
+          'movementPolicy'      : 'windowsScreensaver',  #movement policy (raudies, random walk, windows screensaver)
+          'roomSize'            : 5,          #maze size scaling parameter, metres
+          'dt'                  : 0.005,       #simulation time disretisation 
+          'dx'                  : 0.01,       #space discretisation (for plotting, movement is continuous)
+          'centres'             : centres,       #array of receptive field positions. Overwrites nCells
+          'sigma'               : 1,          #basis cell width scale (irrelevant for onehots)
+          'doorsClosed'         : False,       #whether doors are opened or closed in multicompartment maze
+
+          #TD params 
+          'tau'                 : 4,          #TD decay time, seconds
+          'TDdx'                : 0.01,       #rough distance between TD learning updates, metres 
+          'alpha'               : 0.01,       #TD learning rate 
+          'successorFeatureNorm': 100,        #linear scaling on successor feature definition found to improve learning stability
+          'TDreg'               : 0.01,       #L2 regularisation 
+          
+          #STDP params
+          'peakFiringRate'      : 5,          #peak firing rate of a cell (middle of place field, preferred theta phase)
+          'tau_STDP_plus'       : 20e-3,      #pre trace decay time
+          'tau_STDP_minus'      : 40e-3,      #post trace decay time
+          'a_STDP'              : -0.4,       #pre-before-post potentiation factor (post-before-pre = 1) 
+          'eta'                 : 0.05,       #STDP learning rate
+          'baselineFiringRate'  : 0,          #baseline firing rate for cells 
+
+
+          #Theta precession params
+          'thetaFreq'           : 10,         #theta frequency
+          'precessFraction'     : 0.5,        #fraction of 2pi the prefered phase moves through
+          'kappa'               : 1,          # von mises spread parameter
+          }
+
+
+agent =  MazeAgent(params)

@@ -1,0 +1,406 @@
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+srun: error: enc1-node5: task 0: Exited with exit code 1
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 87, in <module>
+    R_w, R_nw, SNR_w, SNR_nw, skew_w, skew_nw, skew_m = agent.getMetrics(time=30)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node2: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node7: task 0: Exited with exit code 1
+srun: error: enc0-node7: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node5: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node6: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc1-node7: task 0: Exited with exit code 1
+srun: error: enc1-node7: task 0: Exited with exit code 1
+srun: error: enc0-node3: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node6: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node4: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node4: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 84, in <module>
+    fig1, ax1 = plotter.plotVarianceAndError()
+  File "../../mazeAgentUtils.py", line 1609, in plotVarianceAndError
+    R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M = self.mazeAgent.getMetrics(time=time)
+  File "../../mazeAgentUtils.py", line 974, in getMetrics
+    skew_W = fitSkew(x,W_flat)
+  File "../../mazeAgentUtils.py", line 1868, in fitSkew
+    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/scipy/optimize/minpack.py", line 789, in curve_fit
+    raise RuntimeError("Optimal parameters not found: " + errmsg)
+RuntimeError: Optimal parameters not found: Number of calls to function has reached maxfev = 800.
+srun: error: enc0-node3: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 89, in <module>
+    data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5))]
+TypeError: type numpy.ndarray doesn't define __round__ method
+srun: error: enc0-node5: task 0: Exited with exit code 1
