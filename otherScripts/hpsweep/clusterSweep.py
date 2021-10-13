@@ -84,12 +84,12 @@ for t_sr_ in t_sr:
                             fig1, ax1 = plotter.plotVarianceAndError()
                             saveFigure(fig1,'Mvar',specialLocation='../../figures/clusterSweep/Mvar_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
                             
-                            R_w, R_nw, SNR_w, SNR_nw, skew_w, skew_nw, skew_m = agent.getMetrics(time=30)
+                            R_w, R_nw, SNR_w, SNR_nw, skew_w, skew_nw, skew_m, peak_w, peak_nw, peak_m = agent.getMetrics(time=30)
 
-                            data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(float(skew_w),5)), str(round(float(skew_nw),5)), str(round(float(skew_m),5))]
+                            data = [str(t_sr_),str(t_stdp_plus_),str(t_stdp_minus_),str(a_stdp_), str(f_), str(k_), str(fr_), str(round(R_w,5)), str(round(R_nw,5)), str(round(SNR_w,5)), str(round(SNR_nw,5)), str(round(skew_w,5)), str(round(skew_nw,5)), str(round(skew_m,5)), str(round(peak_w,5)), str(round(peak_nw,5)), str(round(peak_m,5))]
                             with open("sweepResults.txt", "a") as file: 
                                 if sum(1 for line in open('sweepResults.txt')) == 0:
-                                    file.write("t_sr,t_stdp_plus,t_stdp_minus,a_stdp,f,k,fr,R_w,R_nw,SNR_w,SNR_nw,skew_w,skew_nw,skew_m")
+                                    file.write("t_sr,t_stdp_plus,t_stdp_minus,a_stdp,f,k,fr,R_w,R_nw,SNR_w,SNR_nw,skew_w,skew_nw,skew_m,peak_w,peak_nw,peak_m")
                                     file.write("\n")
                                 file.write(','.join(data))
                                 file.write('\n')
