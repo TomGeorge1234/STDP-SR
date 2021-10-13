@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Created with matplotlib (https://matplotlib.org/) -->
+<svg height="144pt" version="1.1" viewBox="0 0 72 144" width="72pt" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <metadata>
+  <rdf:RDF xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2021-10-13T14:14:00.567527</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.3.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linecap:butt;stroke-linejoin:round;}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 144 
+L 72 144 
+L 72 0 
+L 0 0 
+z
+" style="fill:none;"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 9 67.68 
+L 64.8 67.68 
+L 64.8 17.28 
+L 9 17.28 
+z
+" style="fill:none;"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path d="M 0 0 
+L 0 3.5 
+" id="m9f545e83f5" style="stroke:#a9a9a9;stroke-width:2;"/>
+      </defs>
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m9f545e83f5" y="67.68"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="36.9" xlink:href="#m9f545e83f5" y="67.68"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="64.8" xlink:href="#m9f545e83f5" y="67.68"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <defs>
+       <path d="M 0 0 
+L -3.5 0 
+" id="m5c86d88096" style="stroke:#a9a9a9;stroke-width:2;"/>
+      </defs>
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m5c86d88096" y="67.68"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_5">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m5c86d88096" y="48.436825"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_6">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m5c86d88096" y="29.19365"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="line2d_7">
+    <path clip-path="url(#pa6eb8ad737)" d="M 10.86031 56.926389 
+L 11.79031 54.552393 
+L 12.72031 53.711494 
+L 13.65031 52.211313 
+L 14.58031 51.224669 
+L 15.51031 49.643429 
+L 16.44031 47.892294 
+L 17.37031 46.612922 
+L 18.30031 45.47873 
+L 19.23031 44.748932 
+L 20.16031 44.107895 
+L 21.09031 42.829957 
+L 22.02031 41.619356 
+L 22.95031 40.101678 
+L 23.88031 40.08665 
+L 24.81031 40.406591 
+L 25.74031 39.006565 
+L 26.67031 38.335821 
+L 27.60031 38.221167 
+L 28.53031 37.577458 
+L 29.46031 36.730818 
+L 30.39031 35.907754 
+L 31.32031 34.512519 
+L 32.25031 34.304487 
+L 33.18031 33.422295 
+L 34.11031 33.17463 
+L 35.04031 32.462934 
+L 35.97031 31.211984 
+L 36.90031 31.047825 
+L 37.83031 31.077396 
+L 38.76031 30.526153 
+L 39.69031 30.193138 
+L 40.62031 29.866237 
+L 41.55031 29.238902 
+L 42.48031 28.420732 
+L 43.41031 27.525068 
+L 44.34031 26.556338 
+L 45.27031 26.33541 
+L 46.20031 25.468847 
+L 47.13031 25.165365 
+L 48.06031 25.002327 
+L 48.99031 23.817724 
+L 49.92031 22.887632 
+L 50.85031 22.079421 
+L 51.78031 21.767317 
+L 52.71031 20.797626 
+L 53.64031 20.609049 
+L 54.57031 20.018192 
+L 55.50031 19.455497 
+L 56.43031 19.279031 
+L 57.36031 19.307531 
+L 58.29031 19.127531 
+L 59.22031 18.79056 
+L 60.15031 18.749633 
+L 61.08031 18.283155 
+L 62.01031 18.242159 
+L 62.94031 18.272834 
+L 63.87031 18.484934 
+" style="fill:none;stroke:#fc8d62;stroke-linecap:square;stroke-width:2;"/>
+   </g>
+   <g id="line2d_8">
+    <path clip-path="url(#pa6eb8ad737)" d="M 10.86031 59.626703 
+L 11.79031 58.803726 
+L 12.72031 57.278857 
+L 13.65031 56.400526 
+L 14.58031 54.738223 
+L 15.51031 54.115754 
+L 16.44031 53.416387 
+L 17.37031 52.189441 
+L 18.30031 51.304372 
+L 19.23031 50.134719 
+L 20.16031 49.804088 
+L 21.09031 48.805243 
+L 22.02031 48.091662 
+L 22.95031 47.828348 
+L 23.88031 47.972735 
+L 24.81031 46.733204 
+L 25.74031 45.707809 
+L 26.67031 45.485418 
+L 27.60031 44.534709 
+L 28.53031 43.793727 
+L 29.46031 42.825502 
+L 30.39031 42.363868 
+L 31.32031 41.521516 
+L 32.25031 41.361735 
+L 33.18031 41.037857 
+L 34.11031 40.465302 
+L 35.04031 39.509712 
+L 35.97031 39.157076 
+L 36.90031 38.887381 
+L 37.83031 38.565081 
+L 38.76031 38.722252 
+L 39.69031 38.822113 
+L 40.62031 38.472735 
+L 41.55031 37.988491 
+L 42.48031 38.067268 
+L 43.41031 37.368498 
+L 44.34031 37.10513 
+L 45.27031 36.38079 
+L 46.20031 36.185566 
+L 47.13031 35.081603 
+L 48.06031 34.773437 
+L 48.99031 34.3969 
+L 49.92031 33.64335 
+L 50.85031 33.164811 
+L 51.78031 32.592682 
+L 52.71031 32.562219 
+L 53.64031 33.272586 
+L 54.57031 32.7555 
+L 55.50031 31.545508 
+L 56.43031 31.302006 
+L 57.36031 31.39541 
+L 58.29031 31.025704 
+L 59.22031 30.826239 
+L 60.15031 30.96786 
+L 61.08031 30.794448 
+L 62.01031 30.841832 
+L 62.94031 30.898815 
+L 63.87031 30.913027 
+" style="fill:none;stroke:#fc8d62;stroke-dasharray:1.5,1.5;stroke-dashoffset:0;stroke-opacity:0.7;stroke-width:1.5;"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 9 67.68 
+L 9 17.28 
+" style="fill:none;stroke:#a9a9a9;stroke-linecap:square;stroke-linejoin:miter;stroke-width:2;"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 64.8 67.68 
+L 64.8 17.28 
+" style="fill:none;"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 9 67.68 
+L 64.8 67.68 
+" style="fill:none;stroke:#a9a9a9;stroke-linecap:square;stroke-linejoin:miter;stroke-width:2;"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 9 17.28 
+L 64.8 17.28 
+" style="fill:none;"/>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_7">
+    <path d="M 9 128.16 
+L 64.8 128.16 
+L 64.8 77.76 
+L 9 77.76 
+z
+" style="fill:none;"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_4">
+     <g id="line2d_9">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m9f545e83f5" y="128.16"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_10">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="36.9" xlink:href="#m9f545e83f5" y="128.16"/>
+      </g>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="64.8" xlink:href="#m9f545e83f5" y="128.16"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_4">
+     <g id="line2d_12">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m5c86d88096" y="128.16"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_13">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m5c86d88096" y="102.96"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_14">
+      <g>
+       <use style="fill:#a9a9a9;stroke:#a9a9a9;stroke-width:2;" x="9" xlink:href="#m5c86d88096" y="77.76"/>
+      </g>
+     </g>
+    </g>
+   </g>
+   <g id="line2d_15">
+    <path clip-path="url(#p6216ef1348)" d="M 10.86031 108.570838 
+L 11.79031 104.03115 
+L 12.72031 101.279451 
+L 13.65031 98.921331 
+L 14.58031 96.973644 
+L 15.51031 95.052594 
+L 16.44031 93.469282 
+L 17.37031 92.417774 
+L 18.30031 91.172047 
+L 19.23031 90.490384 
+L 20.16031 89.768825 
+L 21.09031 89.091537 
+L 22.02031 88.664118 
+L 22.95031 88.213159 
+L 23.88031 87.911854 
+L 24.81031 87.701812 
+L 25.74031 87.385719 
+L 26.67031 87.076882 
+L 27.60031 86.973262 
+L 28.53031 86.7274 
+L 29.46031 86.493144 
+L 30.39031 86.242012 
+L 31.32031 85.91089 
+L 32.25031 85.830221 
+L 33.18031 85.658747 
+L 34.11031 85.536818 
+L 35.04031 85.295335 
+L 35.97031 85.041094 
+L 36.90031 85.037172 
+L 37.83031 84.938322 
+L 38.76031 84.834771 
+L 39.69031 84.793666 
+L 40.62031 84.596288 
+L 41.55031 84.460644 
+L 42.48031 84.373601 
+L 43.41031 84.156018 
+L 44.34031 84.033965 
+L 45.27031 83.992617 
+L 46.20031 83.869398 
+L 47.13031 83.830604 
+L 48.06031 83.7791 
+L 48.99031 83.660753 
+L 49.92031 83.589637 
+L 50.85031 83.490588 
+L 51.78031 83.470105 
+L 52.71031 83.364133 
+L 53.64031 83.338904 
+L 54.57031 83.228435 
+L 55.50031 83.207311 
+L 56.43031 83.17438 
+L 57.36031 83.173986 
+L 58.29031 83.166811 
+L 59.22031 83.112038 
+L 60.15031 83.067465 
+L 61.08031 83.022 
+L 62.01031 83.010815 
+L 62.94031 82.998359 
+L 63.87031 82.989379 
+" style="fill:none;stroke:#fc8d62;stroke-linecap:square;stroke-width:2;"/>
+   </g>
+   <g id="line2d_16">
+    <path clip-path="url(#p6216ef1348)" d="M 10.86031 118.590584 
+L 11.79031 115.285931 
+L 12.72031 113.318253 
+L 13.65031 110.948176 
+L 14.58031 109.246048 
+L 15.51031 107.969781 
+L 16.44031 106.97755 
+L 17.37031 106.27271 
+L 18.30031 105.562253 
+L 19.23031 104.830087 
+L 20.16031 104.139921 
+L 21.09031 103.385729 
+L 22.02031 102.810315 
+L 22.95031 102.369623 
+L 23.88031 101.9684 
+L 24.81031 101.274794 
+L 25.74031 100.720881 
+L 26.67031 100.335504 
+L 27.60031 99.982225 
+L 28.53031 99.746798 
+L 29.46031 99.188383 
+L 30.39031 98.927048 
+L 31.32031 98.771183 
+L 32.25031 98.410863 
+L 33.18031 98.231885 
+L 34.11031 97.887216 
+L 35.04031 97.457721 
+L 35.97031 97.221694 
+L 36.90031 97.151654 
+L 37.83031 97.112085 
+L 38.76031 97.031811 
+L 39.69031 96.935479 
+L 40.62031 96.93725 
+L 41.55031 96.83533 
+L 42.48031 96.712998 
+L 43.41031 96.664374 
+L 44.34031 96.643636 
+L 45.27031 96.528455 
+L 46.20031 96.350922 
+L 47.13031 96.249089 
+L 48.06031 96.124833 
+L 48.99031 96.078945 
+L 49.92031 95.920536 
+L 50.85031 95.72439 
+L 51.78031 95.540692 
+L 52.71031 95.402065 
+L 53.64031 95.399209 
+L 54.57031 95.144024 
+L 55.50031 95.036101 
+L 56.43031 95.053246 
+L 57.36031 94.973095 
+L 58.29031 94.94579 
+L 59.22031 94.899992 
+L 60.15031 94.878267 
+L 61.08031 94.793964 
+L 62.01031 94.794537 
+L 62.94031 94.818209 
+L 63.87031 94.822845 
+" style="fill:none;stroke:#fc8d62;stroke-dasharray:1.5,1.5;stroke-dashoffset:0;stroke-opacity:0.7;stroke-width:1.5;"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 9 128.16 
+L 9 77.76 
+" style="fill:none;stroke:#a9a9a9;stroke-linecap:square;stroke-linejoin:miter;stroke-width:2;"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 64.8 128.16 
+L 64.8 77.76 
+" style="fill:none;"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 9 128.16 
+L 64.8 128.16 
+" style="fill:none;stroke:#a9a9a9;stroke-linecap:square;stroke-linejoin:miter;stroke-width:2;"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 9 77.76 
+L 64.8 77.76 
+" style="fill:none;"/>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pa6eb8ad737">
+   <rect height="50.4" width="55.8" x="9" y="17.28"/>
+  </clipPath>
+  <clipPath id="p6216ef1348">
+   <rect height="50.4" width="55.8" x="9" y="77.76"/>
+  </clipPath>
+ </defs>
+</svg>
