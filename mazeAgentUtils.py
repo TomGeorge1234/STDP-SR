@@ -970,11 +970,11 @@ class MazeAgent():
         Wnotheta_flat /= np.max(Wnotheta_flat)
         M_flat = np.mean(M,axis=0)/np.trapz(np.mean(M,axis=0),x)
         M_flat /= np.max(M_flat)
-        try: skew_W = fitSkew(x,W_flat)
+        try: skew_W = getSkewness(x,W_flat,fitSkewnorm=True)
         except RuntimeError: skew_W = np.NaN
-        try: skew_Wnotheta = fitSkew(x,Wnotheta_flat)
+        try: skew_Wnotheta = getSkewness(x,Wnotheta_flat,fitSkewnorm=True)
         except RuntimeError: skew_Wnotheta = np.NaN
-        try: skew_M = fitSkew(x,M_flat)
+        try: skew_M = getSkewness(x,M_flat,fitSkewnorm=True)
         except RuntimeError: skew_M = np.NaN
 
         #peaks 
