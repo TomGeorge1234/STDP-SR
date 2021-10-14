@@ -49,7 +49,7 @@ defaultParams = {
           'stateType'           : 'gaussian', #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
           'movementPolicy'      : 'raudies',  #movement policy (raudies, random walk, windows screensaver)
           'roomSize'            : 1,          #maze size scaling parameter, metres
-          'dt'                  : 0.01,       #simulation time disretisation 
+          'dt'                  : None,       #simulation time disretisation (defualts to largest )
           'dx'                  : 0.01,       #space discretisation (for plotting, movement is continuous)
           'speedScale'          : 0.16,       #movement speed scale, metres/second
           'rotSpeedScale'       : None,       #rotational speed scale, radians/second
@@ -95,7 +95,7 @@ class MazeAgent():
         (ii) completely decoupled from the TD learning.
     TD learning is 
         (i)  state general. i.e. it learns generic SRs for feature vectors which are not necessarily onehot. See de Cothi and Barry, 2020  
-        (ii) time continuous. Defined in terms of a memory decay time tau, not unitless gamma. Any two staes can be used fro a TD learning step irrespective of their seperation in time. 
+        (ii) time continuous. Defined in terms of a memory decay time tau, not unitless gamma. Any two states can be used fro a TD learning step irrespective of their seperation in time. 
     As the rat moves and learns its position and time stamps are continually saved. Periodically a snapshot of the current SR matrix and state of other parameters in the maze are also saved. 
     """   
     def __init__(self,
@@ -186,6 +186,8 @@ class MazeAgent():
 
         #handle None params
         print("   handling undefined parameters")
+        if self.dt == None: 
+            self.dt = min(self.tau_STDP_plus,self.tau_STDP_minus) / 2
         if self.pos is None: 
             ex = self.extent
             self.pos = np.array([ex[0] + 0.2*(ex[1]-ex[0]),ex[2] + 0.2*(ex[3]-ex[2])])
@@ -298,10 +300,10 @@ class MazeAgent():
         self.preTrace_notheta = np.zeros(self.nCells) #causes potentiation 
         self.postTrace = np.zeros(self.nCells) #causes depression 
         self.postTrace_notheta = np.zeros(self.nCells) #causes depression
-        self.lastSpikeTime = -10
-        self.lastSpikeTime_notheta = -10
-        self.spikeCount = 0
-        self.spikeCount_notheta = 0
+        self.lastSpikeTime = np.array(-10.0)
+        self.lastSpikeTime_notheta = np.array(-10.0)
+        self.spikeCount = np.array(0)
+        self.spikeCount_notheta = np.array(0)
 
     def runRat(self,
             trainTime=10,
@@ -473,15 +475,16 @@ class MazeAgent():
         """   
         state = self.posToState(self.pos)
 
-        data = ( (state,                        self.W_notheta,  self.preTrace_notheta,  self.postTrace_notheta,  self.lastSpikeTime_notheta),
-                 (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        )  )
+        data = ( (state,                        self.W_notheta,  self.preTrace_notheta,  self.postTrace_notheta,  self.lastSpikeTime_notheta, self.spikeCount_notheta),
+                 (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        , self.spikeCount        ) )
 
         
-        for i, (firingRate, W, preTrace, postTrace, lastSpikeTime) in enumerate(data): 
+        for i, (firingRate, W, preTrace, postTrace, lastSpikeTime, spikeCount) in enumerate(data): 
             firingRate_ = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
             n_spike_list = np.random.poisson(firingRate_*dt)
             
             spikingNeurons = (n_spike_list != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
+            spikeCount += sum(spikingNeurons)
             spikeTimes = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons]
             spikeIDs = np.arange(self.nCells)[spikingNeurons]
             spikeList = np.vstack((spikeIDs,spikeTimes)).T
@@ -501,14 +504,9 @@ class MazeAgent():
 
 
 
-                lastSpikeTime = time 
+                lastSpikeTime += timeDiff
 
-            if i == 0:
-                self.lastSpikeTime_notheta = lastSpikeTime
-                self.spikeCount_notheta += len(spikeList)
-            elif i == 1: 
-                self.lastSpikeTime = lastSpikeTime
-                self.spikeCount += len(spikeList)
+            if i == 1: 
                 thetaFiringRate = firingRate_
 
         return thetaFiringRate
@@ -983,7 +981,6 @@ class MazeAgent():
         peak_W = x[np.argmax(W_flat)] - 2.5
         peak_Wnotheta = x[np.argmax(Wnotheta_flat)] - 2.5
         peak_M = x[np.argmax(M_flat)] - 2.5
-        print(round(peak_M,5))
         return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, float(skew_W), float(skew_Wnotheta), float(skew_M), peak_W, peak_Wnotheta, peak_M
 
 
@@ -1315,7 +1312,6 @@ class Visualiser():
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         extent = snapshot['mazeState']['extent']
         placeFields = self.mazeAgent.getPlaceFields(M=M,threshold=threshold)
-        print(placeFields.shape)
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
 
         if fitEllipse_ == True: 
@@ -1325,7 +1321,7 @@ class Visualiser():
         
         if self.mazeAgent.mazeType == 'loop':
             x = self.mazeAgent.discreteCoords[10,:,0]
-            print("Place field     (peak, mean, std, skew) =",peakMeanStdSkew(x,placeFields[number][10,:]))
+            print("Place field        (peak, skew) =",(round(getPeak(x,placeFields[number][10,:]),3),round(getSkewness(x,placeFields[number][10,:]),3)))
 
         peakid= np.argmax(placeFields[number])
         peakcoord = self.mazeAgent.discreteCoords.reshape(-1,2)[peakid]
@@ -1352,7 +1348,7 @@ class Visualiser():
         ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,edgecolors='darkgrey',alpha=1)
         if self.mazeAgent.mazeType == 'loop':
             x = self.mazeAgent.discreteCoords[10,:,0]
-            print("Receptive field (peak, mean, std, skew) =",peakMeanStdSkew(x,rf[10,:]))
+            print("Basis feature      (peak, skew) =",(round(getPeak(x,rf[10,:]),3),round(getSkewness(x,rf[10,:]),3)))
         if fitEllipse_ == True: 
             (X,Y,Z),_= fitEllipse(rf,coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
@@ -1546,16 +1542,14 @@ class Visualiser():
 
         fig, ax = plt.subplots(2,1,figsize=(2,2))
 
-        # Rs_wav = comparisonMetrics(W_av,M_av,x)[0]
-        # Rsq_wnothetaav = comparisonMetrics(W_notheta_av,M_av,x)[0]
 
         Rs_wav = R2(W,M)
         Rsq_wnothetaav = R2(W_notheta,M)
 
-        ax[1].plot(x,M_av,c='C0',linewidth=2)
-        ax[0].plot(x,W_av,c='C1',label=r"$\theta$",linewidth=2)
+        ax[1].plot(x,M_av,c='C0',linewidth=2, label = r" ")
+        ax[0].plot(x,W_av,c='C1',label=r" ",linewidth=2)
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
-        ax[0].plot(x,W_notheta_av,c='C1',label=r"No $\theta$",linewidth=1.5,alpha=0.7,linestyle='--', dashes=(1, 1))
+        ax[0].plot(x,W_notheta_av,c='C1',label=r" ",linewidth=1.5,alpha=0.7,linestyle='--', dashes=(1, 1))
 
         ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.2)
         ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.2)
@@ -1592,6 +1586,7 @@ class Visualiser():
         ax[1].spines['top'].set_color('none')
 
         ax[0].legend(frameon=False)    
+        ax[1].legend(frameon=False)    
         return fig, ax
 
     def plotVarianceAndError(self):
@@ -1797,23 +1792,6 @@ def loadAndDepickle(name, saveDir='../savedObjects/'):
 		item = dill.load(input)
 	return item
 
-def comparisonMetrics(y1,y2,x=None):
-    """Returns tuple of comparison metrics between two curves
-
-    Args:
-        y1 (predicted curve): prediction / curve to be compared
-        y2 (np.array()): true / ground true curve to be compared to 
-        x (np.array, optional): support. Defaults to None and ten to np.arange(len(y1)).
-    """  
-    if x is None: x = np.arange(len(y1))
-
-    Rsquared = R2(y1,y2)
-    skill = 1 - ( (np.sum((y1-y2)**2)) / (np.std(y2)**2) )**(1/2) 
-    area = np.trapz(y = np.abs(y1 - y2), x=x) / np.trapz(y = np.abs(y2), x=x)
-    L2 = np.linalg.norm(y1 - y2) / np.linalg.norm(y2)
-    skew = (scipy.stats.skew(y1) - scipy.stats.skew(y2))**2
-    return (Rsquared, skill, area, L2)
-
 def R2(y1, y2):
     """R squared between two arrays 
 
@@ -1826,43 +1804,6 @@ def R2(y1, y2):
     """    
     return ((1/y1.size) * np.sum((y1-np.mean(y1)) * (y2-np.mean(y2))) / (np.std(y1) * np.std(y2)))**2
 
-
-def peakMeanStdSkew(X,Y):
-    """Finds the mean, standard deviation and skew of a function.
-    Specifically for a function where you have the domain, x, and the (unnorrmalised) height f(x) = y
-
-
-
-    Args:
-        X (np.array()): the domain / support
-        Y (np.array()): the function height 
-
-    Returns:
-        tuple (mean, std, skew) : to 3dp
-    """    
-
-    peak = X[np.argmax(Y)]
-
-    s_xy = 0
-    s_y  = 0
-    for (x,y) in zip(X,Y):
-        s_xy += x*y
-        s_y  += y 
-    mean = s_xy/s_y
-
-    s_var = 0
-    for (x,y) in zip(X,Y):
-        s_var += y*(x-mean)**2
-    var = s_var/s_y
-    std = var**0.5
-
-    s_skew = 0 
-    for (x,y) in zip(X,Y):
-        s_skew += y*((x-mean)/std)**3
-    skew = s_skew/s_y
-
-
-    return (round(peak,3), round(mean,3), round(std,3), round(skew,3))
 
 def getCOM(array):
     print(array.shape)
@@ -1877,11 +1818,45 @@ def getCOM(array):
     j_av = int(j_av)
     return (i_av,j_av)
 
+def getMoment(x,y,moment=1,c=0):
+    """Get moments not from sample of points but from a function (list of x, and f(x)=y)
+
+    Args:
+        x (np.array): independent variable
+        y (np.array): dependent variable
+        moment (int, optional): which moment ot get. Defaults to 1.
+        c (float): about which point to find moment, defaults to zero
+    """    
+    s_x = 0
+    s_y = 0
+    for i in range(len(x)):
+        s_x += ( (x[i] - c)**moment ) * y[i]
+        s_y += y[i]
+    return s_x / s_y
+
 
 def skewnorm(x,a,loc,scale): #see scipy docs
     return scipy.stats.skewnorm.pdf(x,a=a,loc=loc,scale=scale)
 
-def fitSkew(x,y):
-    (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
-    _,_,skewness,_ = scipy.stats.skewnorm.stats(a, moments='mvsk')
+def getSkewness(x,y,fitSkewnorm=False):
+    y = y/np.trapz(y,x) #normalise
+    if fitSkewnorm == True: 
+        (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
+        _,_,skewness,_ = scipy.stats.skewnorm.stats(a=a,loc=loc,scale=scale, moments='mvsk')
+    else:
+        assert np.all(y>=0)
+        mean = getMoment(x,y)
+        std = np.sqrt(getMoment(x,y,moment=2,c=mean))
+        skewness = getMoment(x,y,moment=3,c=mean) / std**3
     return skewness
+
+
+def getPeak(x,y,smooth=True):
+    if smooth == True: 
+        y_smooth = np.empty_like(y)
+        for i in range(len(y)):
+            y_smooth[i] = np.mean(y[max(0,i-1):min(i+2,len(y))])
+        peak = x[np.argmax(y_smooth)]
+    else:
+        peak = x[np.argmax(y)]
+    return peak 
