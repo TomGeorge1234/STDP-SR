@@ -15,6 +15,7 @@ from scipy.stats import vonmises
 from scipy.spatial import distance_matrix
 import time as Time 
 import dill 
+import cmath 
 
 import matplotlib
 import matplotlib.pyplot as plt 
@@ -395,7 +396,6 @@ class MazeAgent():
                 print(f"   Rat position: {self.pos}")
                 break
 
-        
         self.runID += 1
         runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
         self.history = self.history.append(runHistory)
@@ -558,7 +558,7 @@ class MazeAgent():
             if self.doorPassage == False:
                 #if step cross into door region
                 if (np.linalg.norm(self.pos - np.array([self.roomSize,self.roomSize/2])) > doorRegionSize) and (np.linalg.norm(proposedNewPos - np.array([self.roomSize,self.roomSize/2])) < doorRegionSize) and (abs(self.pos[0] - self.roomSize) > 0.01):
-                    if 100*np.random.uniform(0,1) < 100: #start a doorPassage
+                    if 100*np.random.uniform(0,1) < 50: #start a doorPassage
                         self.doorPassage = True
                         self.doorPassageTime = self.t
                         return
@@ -573,7 +573,6 @@ class MazeAgent():
                         print("time")
         
         checkResult = self.checkWallIntercepts(proposedStep)
-
         if self.movementPolicy == 'randomWalk':
             if checkResult[0] != 'collisionNow': 
                 self.pos = proposedNewPos
@@ -778,8 +777,9 @@ class MazeAgent():
                 # if this intercept lies on the current step and on the current wall (0 < lam_s < 1, 0 < lam_w < 1) this implies a "collision" 
                 # if it lies ahead of the current step and on the current wall (lam_s > 1, 0 < lam_w < 1) then we should "veer" away from this wall
                 # this occurs iff the solution to s1 + lam_s*(s2-s1) = w1 + lam_w*(w2 - w1) satisfies 0 <= lam_s & lam_w <= 1
-                lam_s = (np.dot(w1, dw_perp) - np.dot(s1, dw_perp)) / (np.dot(ds, dw_perp)+1e-9)
-                lam_w = (np.dot(s1, ds_perp) - np.dot(w1, ds_perp)) / (np.dot(dw, ds_perp)+1e-9)
+                with np.errstate(divide='ignore'):
+                    lam_s = (np.dot(w1, dw_perp) - np.dot(s1, dw_perp)) / (np.dot(ds, dw_perp))
+                    lam_w = (np.dot(s1, ds_perp) - np.dot(w1, ds_perp)) / (np.dot(dw, ds_perp))
 
                 #there are two situations we need to worry about: 
                 # • 0 < lam_s < 1 and 0 < lam_w < 1: the collision is ON the current proposed step . Do something immediately.
@@ -956,8 +956,8 @@ class MazeAgent():
         mid = int(self.nCells / 2)
 
         #R2s
-        R_W = R2(W,M)              
-        R_Wnotheta = R2(W_notheta,M)  
+        R_W = Rsquared(W,M)              
+        R_Wnotheta = Rsquared(W_notheta,M)  
 
         #SNRs
         SNR_W = (np.max(np.mean(W,axis=0)) - np.min(np.mean(W,axis=0))) / np.mean(np.std(W,axis=0)[mid-5:mid+5])
@@ -970,11 +970,11 @@ class MazeAgent():
         Wnotheta_flat /= np.max(Wnotheta_flat)
         M_flat = np.mean(M,axis=0)/np.trapz(np.mean(M,axis=0),x)
         M_flat /= np.max(M_flat)
-        try: skew_W = getSkewness(x,W_flat,fitSkewnorm=True)
+        try: skew_W = getSkewness(W_flat)
         except RuntimeError: skew_W = np.NaN
-        try: skew_Wnotheta = getSkewness(x,Wnotheta_flat,fitSkewnorm=True)
+        try: skew_Wnotheta = getSkewness(Wnotheta_flat)
         except RuntimeError: skew_Wnotheta = np.NaN
-        try: skew_M = getSkewness(x,M_flat,fitSkewnorm=True)
+        try: skew_M = getSkewness(M_flat)
         except RuntimeError: skew_M = np.NaN
 
         #peaks 
@@ -1321,7 +1321,6 @@ class Visualiser():
         
         if self.mazeAgent.mazeType == 'loop':
             x = self.mazeAgent.discreteCoords[10,:,0]
-            print("Place field        (peak, skew) =",(round(getPeak(x,placeFields[number][10,:]),3),round(getSkewness(x,placeFields[number][10,:]),3)))
 
         peakid= np.argmax(placeFields[number])
         peakcoord = self.mazeAgent.discreteCoords.reshape(-1,2)[peakid]
@@ -1348,7 +1347,6 @@ class Visualiser():
         ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,edgecolors='darkgrey',alpha=1)
         if self.mazeAgent.mazeType == 'loop':
             x = self.mazeAgent.discreteCoords[10,:,0]
-            print("Basis feature      (peak, skew) =",(round(getPeak(x,rf[10,:]),3),round(getSkewness(x,rf[10,:]),3)))
         if fitEllipse_ == True: 
             (X,Y,Z),_= fitEllipse(rf,coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
@@ -1543,8 +1541,8 @@ class Visualiser():
         fig, ax = plt.subplots(2,1,figsize=(2,2))
 
 
-        Rs_wav = R2(W,M)
-        Rsq_wnothetaav = R2(W_notheta,M)
+        Rs_wav = Rsquared(W,M)
+        Rsq_wnothetaav = Rsquared(W_notheta,M)
 
         ax[1].plot(x,M_av,c='C0',linewidth=2, label = r" ")
         ax[0].plot(x,W_av,c='C1',label=r" ",linewidth=2)
@@ -1589,7 +1587,7 @@ class Visualiser():
         ax[1].legend(frameon=False)    
         return fig, ax
 
-    def plotVarianceAndError(self):
+    def plotMetrics(self):
         t         = []
 
         W_snr         = [] 
@@ -1597,9 +1595,6 @@ class Visualiser():
 
         W_r2 = []
         W_notheta_r2  = []
-
-        W_skew = []
-        W_notheta_skew = []
 
         x = self.mazeAgent.centres[:,0]
 
@@ -1620,57 +1615,35 @@ class Visualiser():
                 W_r2.append(R2_W)
                 W_notheta_r2.append(R2_Wnotheta)
 
-                W_skew.append(skew_W)
-                W_notheta_skew.append(skew_Wnotheta)
         
         snapshot = self.mazeAgent.snapshots.iloc[-1]
         time = snapshot['t']
-        R2_W, R2_Wnotheta, SNR_W, SNR_Wnotheta, skew_W, skew_Wnotheta, skew_M, peak_W, peak_Wnotheta, peak_M = self.mazeAgent.getMetrics(time=time)
-        print("              R2        SNR        skew        peak ")
-        print("W             %.2f      %.2f       %.2f        %.2f " %(R2_W,SNR_W,skew_W,peak_W))
-        print("W (no theta)  %.2f      %.2f       %.2f        %.2f " %(R2_Wnotheta,SNR_Wnotheta,skew_Wnotheta,peak_Wnotheta))
-        print("M             -         -          %.2f        %.2f " %(skew_M,peak_M))
 
         fig, ax = plt.subplots(2,1,figsize=(1,2),sharex=True)
 
-        ax[0].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
-        ax[0].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
+        ax[1].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
+        ax[1].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
 
-        ax[1].plot(t,W_r2,c='C1',linewidth=2)
-        ax[1].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
-
-        # ax[2].plot(t,W_skew,c='C1',linewidth=2)
-        # ax[2].plot(t,W_notheta_skew,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
+        ax[0].plot(t,W_r2,c='C1',linewidth=2)
+        ax[0].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
 
 
-        ax[0].set_ylim(bottom=0,top=max(W_snr)+0.15)
-        ax[1].set_ylim(bottom=0,top=1)
-        # ax[2].set_ylim(bottom=0)
-        # ax[3].set_ylim(bottom=0)
 
-        # ax[2].set_title("L2 Error")
-        # ax[3].set_title("R2")
-        ax[0].set_xticks([0,15,30])
-        ax[0].set_xticklabels(["","",""])
+        ax[1].set_ylim(bottom=0,top=max(W_snr)+0.15)
+        ax[0].set_ylim(bottom=0,top=1)
+
         ax[1].set_xticks([0,15,30])
         ax[1].set_xticklabels(["","",""])
+        ax[0].set_xticks([0,15,30])
+        ax[0].set_xticklabels(["","",""])
 
-        ax[0].tick_params(width=2,color='darkgrey')
         ax[1].tick_params(width=2,color='darkgrey')
-        ax[0].set_yticks([0,3,6])
-        ax[0].set_yticklabels(["","",""])
-        ax[1].set_yticks([0,0.5,1])
+        ax[0].tick_params(width=2,color='darkgrey')
+        ax[1].set_yticks([0,3,6])
         ax[1].set_yticklabels(["","",""])
-
-        # ax[2].set_xticks([0,15,30])
-        # ax[2].set_xticklabels(["","",""])
-        # ax[2].set_yticks([0,skew_M])
-        # ax[2].set_yticklabels(["",""])
-        # ax[2].set_ylim(bottom = 1.5*skew_M)
-        # ax[2].axhline(y=skew_M,c='C0',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
-        # ax[2].tick_params(width=2,color='darkgrey')
-
+        ax[0].set_yticks([0,0.5,1])
+        ax[0].set_yticklabels(["","",""])
 
         for i in range(2):
 
@@ -1769,7 +1742,6 @@ def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None
 def pickleAndSave(class_,name,saveDir='../savedObjects/'):
 	"""pickles and saves a class
 	this is not an efficient way to save the data, but it is easy 
-	use carefully with reservoir and Reservoireservoirair clases as these can get HUGE (~gigabytes)
 	this will overwrite previous saves without warning
 	Args:
 		class_ (any class): the class/model to save
@@ -1792,7 +1764,7 @@ def loadAndDepickle(name, saveDir='../savedObjects/'):
 		item = dill.load(input)
 	return item
 
-def R2(y1, y2):
+def Rsquared(y1, y2):
     """R squared between two arrays 
 
     Args:
@@ -1834,20 +1806,34 @@ def getMoment(x,y,moment=1,c=0):
         s_y += y[i]
     return s_x / s_y
 
+def getCircularMoment(theta,y,moment=1,c=0):
+    Cp = np.sum(np.cos(moment*theta)*y) / np.sum(y)
+    Sp = np.sum(np.sin(moment*theta)*y) / np.sum(y)
+    Rp = np.sqrt(Cp**2 + Sp**2)
+    if Cp > 0 and Sp > 0: 
+        Tp = np.arctan(Sp/Cp)
+    elif Cp < 0: 
+        Tp = np.arctan(Sp/Cp) + np.pi
+    elif Sp < 0 and Cp > 0: 
+        Tp = np.arctan(Sp/Cp) + 2*np.pi
+    return Rp, Tp
 
-def skewnorm(x,a,loc,scale): #see scipy docs
-    return scipy.stats.skewnorm.pdf(x,a=a,loc=loc,scale=scale)
 
-def getSkewness(x,y,fitSkewnorm=False):
-    y = y/np.trapz(y,x) #normalise
-    if fitSkewnorm == True: 
-        (a,loc,scale), _ = scipy.optimize.curve_fit(skewnorm,x,y)
-        _,_,skewness,_ = scipy.stats.skewnorm.stats(a=a,loc=loc,scale=scale, moments='mvsk')
-    else:
-        assert np.all(y>=0)
+
+def getSkewness(y,circular=False):
+    if not np.all(y>=0):
+        y = np.maximum(y,0)
+    x = np.linspace(0,2*np.pi,len(y))
+    if circular == False: 
         mean = getMoment(x,y)
         std = np.sqrt(getMoment(x,y,moment=2,c=mean))
         skewness = getMoment(x,y,moment=3,c=mean) / std**3
+    if circular == True: #NCSS Statistical Software NCSS.com, Chapter 230, Circular Data Analysis, https://ncss-wpengine.netdna-ssl.com/wp-content/themes/ncss/pdf/Procedures/NCSS/Circular_Data_Analysis.pdf
+        R1, T1 = getCircularMoment(x,y,moment=1)
+        R2, T2 = getCircularMoment(x,y,moment=2)
+        V = 1-R1
+        skewness = R2*np.sin(2*T1-T2) / (1-R1)**(3/2)
+
     return skewness
 
 
