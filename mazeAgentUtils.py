@@ -2,9 +2,6 @@ import numpy as np
 
 import pandas as pd 
 from tqdm.notebook import tqdm
-from matplotlib.animation import FuncAnimation
-from matplotlib import rcParams, rc
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from datetime import datetime 
 import numbers
 from pprint import pprint as pprint
@@ -16,31 +13,11 @@ from scipy.spatial import distance_matrix
 import time as Time 
 import dill 
 import cmath 
+import sys 
 
-import matplotlib
-import matplotlib.pyplot as plt 
-rcParams['figure.dpi']= 400
-rcParams['axes.labelsize']=7
-rcParams['axes.labelpad']=2
-rcParams['axes.titlepad']=3
-rcParams['axes.titlesize']=9
-rcParams['axes.xmargin']=0
-rcParams['axes.ymargin']=0
-rcParams['axes.facecolor']=[1,1,1,0] 
-rcParams['xtick.labelsize']=7
-rcParams['ytick.labelsize']=7
-rcParams['grid.linewidth']=0.1
-rcParams['legend.fontsize']=7
-rcParams['lines.linewidth']=0.5
-rcParams['xtick.major.pad']=2
-rcParams['xtick.minor.pad']=2
-rcParams['ytick.major.pad']=2
-rcParams['ytick.minor.pad']=2
-rcParams['figure.titlesize']='medium'
+sys.path.insert(-1,"/Users/tomgeorge/Documents/figureMaking/")
+from plotFormatting import *
 
-from cycler import cycler
-rcParams['axes.prop_cycle']=cycler('color', ['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3'])
-rcParams['image.cmap'] = 'inferno'
 
 #Default parameters for MazeAgent 
 defaultParams = { 
@@ -63,6 +40,7 @@ defaultParams = {
           'reorderCells'        : True,       #whether to reorde the cell centres which have been provided
           'firingRateLookUp'    : False,      #use quantised lookup table for firing rates 
           'biasDoorCross'       : False,      #if True, in twoRoom maze door crossings are biased towards
+          'biasWallFollow'      : True,       #if True, agent aligns to wall when gets too near.
 
           #TD params 
           'tau'                 : 4,          #TD decay time, seconds
@@ -87,6 +65,9 @@ defaultParams = {
 
 }
 
+class testclass():
+    def printathing(self): print("New")
+
 class MazeAgent():
     """MazeAgent defines an agent moving around a maze. 
     The agent moves according to a predefined movement policy
@@ -100,7 +81,8 @@ class MazeAgent():
     As the rat moves and learns its position and time stamps are continually saved. Periodically a snapshot of the current SR matrix and state of other parameters in the maze are also saved. 
     """   
     def __init__(self,
-                params={}):
+                params={},
+                loadFromFileCalled=None):
         """Sets the parameters of the maze anad agent (using default if not provided) 
         and initialises everything. This includes: 
         •initilising history dataframes
@@ -113,14 +95,18 @@ class MazeAgent():
         Args:
             params (dict, optional): A dictionary of parameters which you want to differ from the default. Defaults to {}.
         """        
-        print("Setting parameters")
-        for key, value in defaultParams.items():
-            setattr(self, key, value)
-        self.updateParams(params)
+        if loadFromFileCalled is not None: 
+            self.loadFromFile(name=loadFromFileCalled)
+            
+        else:
+            print("Setting parameters")
+            for key, value in defaultParams.items():
+                setattr(self, key, value)
+            self.updateParams(params)
 
-        print("Initialising")
-        self.initialise()
-        print("DONE")
+            print("Initialising")
+            self.initialise()
+            print("DONE")
 
     def updateParams(self,
                      params : dict):        
@@ -140,7 +126,7 @@ class MazeAgent():
         #initialise history dataframes
         print("   making state/history dataframes")
         self.mazeState = {}
-        self.history = pd.DataFrame(columns = ['t','pos','delta','color','runID','firingRate','thetaPhase']) 
+        self.history = pd.DataFrame(columns = ['t','pos','delta','runID']) 
         self.snapshots = pd.DataFrame(columns = ['t','M','W','mazeState'])
 
         #set pos/vel
@@ -308,7 +294,6 @@ class MazeAgent():
 
     def runRat(self,
             trainTime=10,
-            plotColor=None,
             saveEvery=0.5,
             TDSRLearn=True,
             STDPLearn=True):
@@ -320,7 +305,6 @@ class MazeAgent():
         Runs can be interrupted with KeyboardInterrupt, data will still be saved. 
         Args:
             trainTime (int, optional): How long to explore in minutes. Defaults to 10.
-            plotColor (str, optional): When plotting trajectory, what color to plot it. Defaults to 'C0'.
             saveEvery (int, optional): Frequency to save snapshots, in minutes. Defaults to 1.
             TDSRLearn (bool,optional): toggles whether to do TD learning 
             STDPLearn (bool, optional): toggles whether to do STDP learning 
@@ -330,10 +314,6 @@ class MazeAgent():
         hist_t = np.zeros(steps)
         hist_pos = np.zeros((steps,2))
         hist_delta = np.zeros(steps)
-        hist_plotColor = np.zeros(steps).astype(str)
-        hist_runID = np.zeros(steps)
-        hist_firingRate = np.zeros((steps,self.nCells))
-        hist_thetaPhase = np.zeros(steps)
 
         lastTDstep, distanceToTD = 0, np.random.exponential(self.TDdx) #2cm scale
         
@@ -352,7 +332,7 @@ class MazeAgent():
                     # print(self.pos)
                     """STDP learning step"""
                     if (STDPLearn == True) and (self.stateType in  ['bump','gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
-                        hist_firingRate[i,:] = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+                        _ = self.STDPLearningStep(dt = self.t - hist_t[i-1])
 
                             
                     """TD learning step"""
@@ -368,7 +348,6 @@ class MazeAgent():
                             delta = self.TDLearningStep(pos=self.pos, prevPos=hist_pos[lastTDstep], dt=dtTD, tau=self.tau, alpha=alpha_)
                             lastTDstep = i 
                             distanceToTD = np.random.exponential(self.TDdx)
-                            hist_plotColor[i] = 'r'
                             hist_delta[i] = delta
 
 
@@ -378,9 +357,6 @@ class MazeAgent():
                 #update history arrays
                 hist_pos[i] = self.pos
                 hist_t[i] = self.t
-                hist_plotColor[i] = (plotColor or 'C'+str(self.runID))
-                hist_runID[i] = self.runID
-                hist_thetaPhase[i] = self.thetaPhase
 
                 #save snapshot 
                 if (isinstance(saveEvery, numbers.Number)) and (i % int(saveEvery * 60 / self.dt) == 0):
@@ -397,7 +373,7 @@ class MazeAgent():
                 break
 
         self.runID += 1
-        runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i]), 'color':list(hist_plotColor[:i]), 'runID':list(hist_runID[:i]), 'firingRate':list(hist_firingRate[:i]), 'thetaPhase':list(hist_thetaPhase[:i])})
+        runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i])})
         self.history = self.history.append(runHistory)
         snapshot = pd.DataFrame({'t': [self.t], 'M': [self.M.copy()], 'W': [self.W.copy()], 'W_notheta':[self.W_notheta.copy()], 'mazeState':[self.mazeState]})
         self.snapshots = self.snapshots.append(snapshot)
@@ -599,14 +575,15 @@ class MazeAgent():
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
         
         if self.movementPolicy == 'raudies':
-            if checkResult[0] == 'noImmediateCollision':
-                self.pos = proposedNewPos
             if checkResult[0] == 'collisionNow':
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
-            if checkResult[0] == 'collisionAhead':
+            elif ((checkResult[0] == 'collisionAhead') and (self.biasWallFollow==True)):
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'follow')
+            elif (checkResult[0] == 'noImmediateCollision') or (((checkResult[0] == 'collisionAhead') and (self.biasWallFollow==False))):
+                self.pos = proposedNewPos
+
             
             self.speed = np.random.rayleigh(self.speedScale)
             if self.t - self.lastTurnUpdate >= 0.1: #turn updating done at intervals independednt of dt or else many small turns cancel out but few big ones dont 
@@ -983,7 +960,15 @@ class MazeAgent():
         peak_M = x[np.argmax(M_flat)] - 2.5
         return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, float(skew_W), float(skew_Wnotheta), float(skew_M), peak_W, peak_Wnotheta, peak_M
 
+    def saveToFile(self,name):
+        np.savez("../savedObjects/"+name+".npz",self.__dict__)
+        return
 
+    def loadFromFile(self,name):
+        attributes_dictionary = np.load("../savedObjects/"+name+".npz",allow_pickle=True)['arr_0'].item()
+        for key, value in attributes_dictionary.items():
+            print(key)
+            setattr(self, key, value)
 
     
         
@@ -1205,16 +1190,14 @@ class Visualiser():
             saveFigure(fig, 'mazeStructure')
         return fig, ax
     
-    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,color=None):
+    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2):
         skiprate = max(1,int(0.015/(self.mazeAgent.speedScale * self.mazeAgent.dt)))
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
         endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
         trajectory = np.stack(self.history['pos'][startid:endid])[::skiprate]
-        if color is None: 
-            color = np.stack(self.history['color'][startid:endid])[::skiprate]
-        ax.scatter(trajectory[:,0],trajectory[:,1],s=10,alpha=0.7,c=color,zorder=2)
+        ax.scatter(trajectory[:,0],trajectory[:,1],s=10,alpha=0.7,zorder=2)
         saveFigure(fig, "trajectory")
         return fig, ax
 
@@ -1232,7 +1215,6 @@ class Visualiser():
             elif whichM == 'W': M = snapshot['W'].copy()
             elif whichM == 'M_theta': M = self.mazeAgent.M_theta.copy()
             elif whichM == 'W_notheta': M = self.mazeAgent.W_notheta.copy()
-
 
         t = int(np.round(snapshot['t']))
         most_positive = np.max(M)
@@ -1487,20 +1469,6 @@ class Visualiser():
         return anim
 
 
-    def plotSTDPFiringRates(self,starttime=0,endtime=5/60):
-        firingRates = np.array(list(self.mazeAgent.history['firingRate'].to_numpy()))
-        t = self.mazeAgent.history['t'].to_numpy()
-        theta = self.mazeAgent.history['thetaPhase'].to_numpy()
-        startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
-        endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
-        fig, ax = plt.subplots(figsize=(5,1))
-        for i in range(firingRates.shape[1]):
-            ax.scatter(t[startid:endid],firingRates[startid:endid,i],s=1,alpha=0.5)
-        ax.plot(t[startid:endid],0.05*np.sin(theta[startid:endid]),linewidth=0.5,c='black')
-        ax.set_xlabel("Time / s")
-        ax.set_ylabel("Cell firing rate")
-        saveFigure(fig,"firingRate")
-        return fig, ax 
     
     def plotMAveraged(self,time=None):
         # only works/defined for open loop maze
@@ -1511,7 +1479,7 @@ class Visualiser():
             snapshot = self.snapshots.iloc[-1]
 
         M = snapshot['M'].copy()
-        W = snapshot['W'].copy()
+        W = snapshot['W'].copy() 
         W_notheta = snapshot['W_notheta'].copy()
         roll = int(self.mazeAgent.nCells/2)
         M_copy, W_copy, W_notheta_copy = M.copy(), W.copy(), W_notheta.copy()
@@ -1655,8 +1623,32 @@ class Visualiser():
             ax[i].spines['bottom'].set_color('darkgrey')
             ax[i].spines['bottom'].set_linewidth(2)
             ax[i].spines['top'].set_color('none')
+        
+        return fig, ax 
 
 
+    def plotFieldSilhouette(self, N=25, plot_pf=True, plot_pf_M=True, plot_rf=False):
+        x = self.mazeAgent.discreteCoords[10,:,0]
+        rf = self.mazeAgent.discreteStates[10,:,N]
+        pf = self.mazeAgent.getPlaceFields(M=self.mazeAgent.W, threshold=0)[N][10,:]
+        pf_M = self.mazeAgent.getPlaceFields(M=self.mazeAgent.M, threshold=0)[N][10,:]
+        rf, pf, pf_M = rf/np.trapz(rf,x), pf/np.trapz(pf,x), pf_M/np.trapz(pf_M,x)
+
+        fig, ax = plt.subplots(figsize=(2,0.5))
+        ax.set_xlim(0,5)
+        if plot_rf == True:
+            ax.fill_between(x[rf>=0],rf[rf>=0],0,facecolor="C2",alpha=0.5)
+        if plot_pf_M == True:
+            ax.fill_between(x[pf_M>=0],pf_M[pf_M>=0],0,facecolor="C0",alpha=0.5)        
+        if plot_pf == True:
+            ax.fill_between(x[pf>=0],pf[pf>=0],0,facecolor="C1",alpha=0.5)
+        
+        hideAxes(ax)
+        ax.spines['left'].set_color('none')
+        ax.set_xticks([0,2.5,5])
+        ax.set_yticks([])
+        ax.set_xticklabels(["","",""])
+        plt.tight_layout()
 
         return fig, ax
 
@@ -1735,7 +1727,7 @@ def saveFigure(fig,saveTitle="",transparent=True,anim=False,specialLocation=None
         fig.savefig(path+".pdf", dpi=400,transparent=transparent)
     
     if specialLocation is not None: 
-        fig.savefig(specialLocation, dpi=400,transparent=transparent)
+        fig.savefig(specialLocation, dpi=400,transparent=transparent,bbox_inches='tight')
 
     return path
 
