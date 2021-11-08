@@ -54,7 +54,7 @@ for t_sr_ in t_sr:
                                 'movementPolicy'      : 'windowsScreensaver',  #movement policy (raudies, random walk, windows screensaver)
                                 'roomSize'            : 5,          #maze size scaling parameter, metres
                                 'dt'                  : 0.001,       #simulation time disretisation 
-                                'dx'                  : 0.02,       #space discretisation (for plotting, movement is continuous)
+                                'dx'                  : 0.2,       #space discretisation (for plotting, movement is continuous)
                                 'initPos'             : [0.1,0.1],  #initial position [x0, y0], metres
                                 'centres'             : centres,       #array of receptive field positions. Overwrites nCells
                                 'sigma'               : 1,          #basis cell width scale (irrelevant for onehots)

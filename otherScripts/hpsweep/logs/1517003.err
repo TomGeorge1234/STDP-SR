@@ -1,0 +1,116 @@
+srun: error: task 0 launch failed: Slurmd could not execve job
+srun: error: task 0 launch failed: Slurmd could not execve job
+Traceback (most recent call last):
+  File "clusterSweep.py", line 82, in <module>
+    saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
+  File "../../mazeAgentUtils.py", line 1765, in saveFigure
+    fig.savefig(specialLocation, dpi=400,transparent=transparent)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/figure.py", line 2311, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2210, in print_figure
+    result = print_method(
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backends/backend_svg.py", line 1317, in print_svg
+    with cbook.open_file_cm(filename, "w", encoding="utf-8") as fh:
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 423, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 408, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+FileNotFoundError: [Errno 2] No such file or directory: '../../figures/clusterSweep/Mav_4000_10_100_-100_500_1000_5000.svg'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 82, in <module>
+    saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
+  File "../../mazeAgentUtils.py", line 1765, in saveFigure
+    fig.savefig(specialLocation, dpi=400,transparent=transparent)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/figure.py", line 2311, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2210, in print_figure
+    result = print_method(
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backends/backend_svg.py", line 1317, in print_svg
+    with cbook.open_file_cm(filename, "w", encoding="utf-8") as fh:
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 423, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 408, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+FileNotFoundError: [Errno 2] No such file or directory: '../../figures/clusterSweep/Mav_4000_100_100_-100_500_1000_5000.svg'
+srun: error: enc2-node12: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 82, in <module>
+    saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
+  File "../../mazeAgentUtils.py", line 1765, in saveFigure
+    fig.savefig(specialLocation, dpi=400,transparent=transparent)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/figure.py", line 2311, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2210, in print_figure
+    result = print_method(
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backends/backend_svg.py", line 1317, in print_svg
+    with cbook.open_file_cm(filename, "w", encoding="utf-8") as fh:
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 423, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 408, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+FileNotFoundError: [Errno 2] No such file or directory: '../../figures/clusterSweep/Mav_4000_10_10_-1000_500_1000_5000.svg'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 82, in <module>
+    saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
+  File "../../mazeAgentUtils.py", line 1765, in saveFigure
+    fig.savefig(specialLocation, dpi=400,transparent=transparent)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/figure.py", line 2311, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2210, in print_figure
+    result = print_method(
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backends/backend_svg.py", line 1317, in print_svg
+    with cbook.open_file_cm(filename, "w", encoding="utf-8") as fh:
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 423, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 408, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+FileNotFoundError: [Errno 2] No such file or directory: '../../figures/clusterSweep/Mav_4000_10_100_-1000_500_1000_5000.svg'
+srun: error: enc2-node12: task 0: Exited with exit code 1
+srun: error: enc2-node11: task 0: Exited with exit code 1
+srun: error: enc2-node12: task 0: Exited with exit code 1
+Traceback (most recent call last):
+  File "clusterSweep.py", line 82, in <module>
+    saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
+  File "../../mazeAgentUtils.py", line 1765, in saveFigure
+    fig.savefig(specialLocation, dpi=400,transparent=transparent)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/figure.py", line 2311, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2210, in print_figure
+    result = print_method(
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backends/backend_svg.py", line 1317, in print_svg
+    with cbook.open_file_cm(filename, "w", encoding="utf-8") as fh:
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 423, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 408, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+FileNotFoundError: [Errno 2] No such file or directory: '../../figures/clusterSweep/Mav_4000_100_10_-100_500_1000_5000.svg'
+Traceback (most recent call last):
+  File "clusterSweep.py", line 82, in <module>
+    saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
+  File "../../mazeAgentUtils.py", line 1765, in saveFigure
+    fig.savefig(specialLocation, dpi=400,transparent=transparent)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/figure.py", line 2311, in savefig
+    self.canvas.print_figure(fname, **kwargs)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backend_bases.py", line 2210, in print_figure
+    result = print_method(
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/backends/backend_svg.py", line 1317, in print_svg
+    with cbook.open_file_cm(filename, "w", encoding="utf-8") as fh:
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 423, in open_file_cm
+    fh, opened = to_filehandle(path_or_file, mode, True, encoding)
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/matplotlib/cbook/__init__.py", line 408, in to_filehandle
+    fh = open(fname, flag, encoding=encoding)
+FileNotFoundError: [Errno 2] No such file or directory: '../../figures/clusterSweep/Mav_4000_100_10_-1000_500_1000_5000.svg'
+srun: error: enc2-node12: task 0: Exited with exit code 1
+srun: error: enc2-node11: task 0: Exited with exit code 1
