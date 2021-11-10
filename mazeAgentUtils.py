@@ -15,8 +15,8 @@ import dill
 import cmath 
 import sys 
 
-sys.path.insert(-1,"/Users/tomgeorge/Documents/figureMaking/")
-from plotFormatting import *
+sys.path.insert(-1,"../tomplotlib/")
+from tomplotlib import *
 
 
 #Default parameters for MazeAgent 
