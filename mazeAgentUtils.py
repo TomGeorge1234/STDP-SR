@@ -15,8 +15,8 @@ import dill
 import cmath 
 import sys 
 
-sys.path.insert(-1,"/Users/tomgeorge/Documents/figureMaking/")
-from plotFormatting import *
+sys.path.insert(-1,"../tomplotlib/")
+from tomplotlib import *
 
 
 #Default parameters for MazeAgent 
@@ -960,15 +960,16 @@ class MazeAgent():
         peak_M = x[np.argmax(M_flat)] - 2.5
         return R_W, R_Wnotheta, SNR_W, SNR_Wnotheta, float(skew_W), float(skew_Wnotheta), float(skew_M), peak_W, peak_Wnotheta, peak_M
 
-    def saveToFile(self,name):
-        np.savez("../savedObjects/"+name+".npz",self.__dict__)
+    def saveToFile(self,name,directory="../savedObjects/"):
+        np.savez(directory+name+".npz",self.__dict__)
         return
 
-    def loadFromFile(self,name):
-        attributes_dictionary = np.load("../savedObjects/"+name+".npz",allow_pickle=True)['arr_0'].item()
+    def loadFromFile(self,name,directory="../savedObjects/"):
+        attributes_dictionary = np.load(directory+name+".npz",allow_pickle=True)['arr_0'].item()
+        print("Loading attributes...",end="")
         for key, value in attributes_dictionary.items():
-            print(key)
             setattr(self, key, value)
+        print("done. use 'agent3.__dict__.keys()'  to see avaiable attributes")
 
     
         
