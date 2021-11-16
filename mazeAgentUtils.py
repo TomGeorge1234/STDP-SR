@@ -449,41 +449,65 @@ class MazeAgent():
         Returns:
             float array: vector of firing rates for this time step 
         """   
-        state = self.posToState(self.pos)
+        firingRate_CA3 = self.posToState(self.pos)
 
-        data = ( (state,                        self.W_notheta,  self.preTrace_notheta,  self.postTrace_notheta,  self.lastSpikeTime_notheta, self.spikeCount_notheta),
-                 (self.thetaModulation(state),  self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        , self.spikeCount        ) )
+        data = (  (firingRate_CA3,    self.W_notheta,  self.preTrace_notheta,  self.postTrace_notheta,  self.lastSpikeTime_notheta, self.spikeCount_notheta),
+                  (firingRate_CA3,    self.W,          self.preTrace,          self.postTrace,          self.lastSpikeTime        , self.spikeCount        ) )
 
         
-        for i, (firingRate, W, preTrace, postTrace, lastSpikeTime, spikeCount) in enumerate(data): 
-            firingRate_ = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
-            n_spike_list = np.random.poisson(firingRate_*dt)
+        for i, (firingRate_CA3, W, preTrace, postTrace, lastSpikeTime, spikeCount) in enumerate(data): 
             
-            spikingNeurons = (n_spike_list != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
-            spikeCount += sum(spikingNeurons)
-            spikeTimes = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons]
-            spikeIDs = np.arange(self.nCells)[spikingNeurons]
-            spikeList = np.vstack((spikeIDs,spikeTimes)).T
+            firingRate_CA3_ = self.peakFiringRate * firingRate_CA3 + self.baselineFiringRate
+            W_norm = W / np.sum(W,axis=1)[:np.newaxis]
+            firingRate_CA1_ = np.maximum(np.matmul(W_norm,firingRate_CA3_),0) 
+
+            if i == 1:
+                firingRate_CA3_ =  self.thetaModulation(firingRate_CA3_)#scale firing rate and add noise                
+                firingRate_CA1_ =  self.thetaModulation(firingRate_CA1_)#scale firing rate and add noise                
+
+            n_spike_list_CA3 = np.random.poisson(firingRate_CA3_*dt)
+            spikingNeurons_CA3 = (n_spike_list_CA3 != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
+            spikeCount += sum(spikingNeurons_CA3)
+            spikeTimes_CA3 = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons_CA3]
+            spikeIDs_CA3 = np.arange(self.nCells)[spikingNeurons_CA3]
+            area_CA3 = np.array([0]*len(spikeIDs_CA3))
+            spikeList_CA3 = np.vstack((spikeIDs_CA3,spikeTimes_CA3,area_CA3)).T
+
+            n_spike_list_CA1 = np.random.poisson(firingRate_CA1_*dt)
+            spikingNeurons_CA1 = (n_spike_list_CA1 != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
+            spikeCount += sum(spikingNeurons_CA1)
+            spikeTimes_CA1 = np.random.uniform(self.t,self.t+dt,self.nCells)[spikingNeurons_CA1]
+            spikeIDs_CA1 = np.arange(self.nCells)[spikingNeurons_CA1]
+            area_CA1 = np.array([1]*len(spikeIDs_CA1))
+            spikeList_CA1 = np.vstack((spikeIDs_CA1,spikeTimes_CA1,area_CA1)).T
+
+
+            spikeList = np.concatenate((spikeList_CA3,spikeList_CA1))
+
             spikeList = spikeList[np.argsort(spikeList[:,1])]   
 
             for spikeInfo in spikeList:
-                cell, time = int(spikeInfo[0]), spikeInfo[1] 
-                timeDiff = time - lastSpikeTime 
+                cell, time, CA1 = int(spikeInfo[0]), spikeInfo[1], (spikeInfo[2]==1.0)
 
+                timeDiff = time - lastSpikeTime 
 
                 preTrace        *= np.exp(- timeDiff / self.tau_STDP_plus) #traces for all cells decay...
                 postTrace       *= np.exp(- timeDiff / self.tau_STDP_minus) #traces for all cells decay...
-                W[cell,:]       += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
-                W[:,cell]       += self.eta * postTrace #weights to presynaptic neuron (should decrease when post fires) 
-                postTrace[cell] += self.a_STDP  #update trace (post trace probably negative)
-                preTrace[cell]  += 1 #update trace 
 
+                if CA1 == True:
+                    #a post synpatic cell has fired, stregnthen all synapses into this cell according to presynaptic trace               
+                    W[cell,:]       += self.eta * preTrace #weights to postsynaptic neuron (should increase when post fires)
+                    postTrace[cell] += self.a_STDP  #update trace (post trace probably negative)
+                elif CA1 == False: 
+                    #a pre synpatic cell has fired, weaken all synapses out of this cell according to postsynaptic trace               
+                    W[:,cell]       += self.eta * postTrace #weights to presynaptic neuron (should decrease when post fires) 
+                    preTrace[cell]  += 1 #update trace 
 
 
                 lastSpikeTime += timeDiff
 
             if i == 1: 
-                thetaFiringRate = firingRate_
+                thetaFiringRate = firingRate_CA3_
 
         return thetaFiringRate
 
