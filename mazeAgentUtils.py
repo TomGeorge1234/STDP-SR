@@ -4,19 +4,18 @@ import pandas as pd
 from tqdm.notebook import tqdm
 from datetime import datetime 
 import numbers
-from pprint import pprint as pprint
+from pprint import pprint as pprintq
 import os
-import pickle
-import scipy
 from scipy.stats import vonmises
 from scipy.spatial import distance_matrix
-import time as Time 
 import dill 
-import cmath 
-import sys 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.pyplot as plt 
 
-sys.path.insert(-1,"../tomplotlib/")
-from tomplotlib import *
+import tomplotlib.tomplotlib as tpl
+tpl.figureDirectory = './figures'
+tpl.setColorscheme(colorscheme=2)
+
 
 
 #Default parameters for MazeAgent 
@@ -64,9 +63,6 @@ defaultParams = {
           'kappa'               : 1,          # von mises spread parameter
 
 }
-
-class testclass():
-    def printathing(self): print("New")
 
 class MazeAgent():
     """MazeAgent defines an agent moving around a maze. 
@@ -1191,14 +1187,17 @@ class Visualiser():
             saveFigure(fig, 'mazeStructure')
         return fig, ax
     
-    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2):
+    def plotTrajectory(self,fig=None, ax=None, hist_id=-1,starttime=0,endtime=2,plotAsLine=False):
         skiprate = max(1,int(0.015/(self.mazeAgent.speedScale * self.mazeAgent.dt)))
         if (fig, ax) == (None, None):
             fig, ax = self.plotMazeStructure(hist_id=hist_id)
         startid = self.history['t'].sub(starttime*60).abs().to_numpy().argmin()
         endid = self.history['t'].sub(endtime*60).abs().to_numpy().argmin()
         trajectory = np.stack(self.history['pos'][startid:endid])[::skiprate]
-        ax.scatter(trajectory[:,0],trajectory[:,1],s=10,alpha=0.7,zorder=2)
+        if plotAsLine == False:
+            ax.scatter(trajectory[:,0],trajectory[:,1],s=10,alpha=0.7,zorder=2)
+        elif plotAsLine == True:
+            ax.plot(trajectory[:,0],trajectory[:,1])
         saveFigure(fig, "trajectory")
         return fig, ax
 
@@ -1269,7 +1268,7 @@ class Visualiser():
         t = self.mazeAgent.saveHist[i]['t']
         ax.text(x=0, y=0, t="%.2f" %t)
 
-    def plotPlaceField(self, M=None, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse_=False):
+    def plotPlaceField(self, M=None, hist_id=-1, time=None, fig=None, ax=None, number=None, show=True, animationCall=False, plotTimeStamp=False,save=True,STDP=False,threshold=None,fitEllipse_=False,no_theta=False):
         
         if M is None: 
             #time in minutes
@@ -1288,7 +1287,11 @@ class Visualiser():
             snapshot = self.snapshots.iloc[hist_id]
             M = snapshot['M']
             if STDP==True: 
-                M = snapshot['W']
+                if no_theta == True:
+                    snapshot = self.snapshots.iloc[hist_id-22]
+                    M = snapshot['W_notheta']
+                else:
+                    M = snapshot['W']
             t = int(np.round(snapshot['t'] / 60))
         else:
             snapshot = self.snapshots.iloc[hist_id]
@@ -1298,7 +1301,7 @@ class Visualiser():
         ax.imshow(placeFields[number],extent=extent,interpolation=None)
 
         if fitEllipse_ == True: 
-            (X,Y,Z),_ = fitEllipse(placeFields[number],coords=self.mazeAgent.discreteCoords)
+            (X,Y,Z),_,_ = fitEllipse(placeFields[number],coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
 
         
@@ -1307,7 +1310,7 @@ class Visualiser():
 
         peakid= np.argmax(placeFields[number])
         peakcoord = self.mazeAgent.discreteCoords.reshape(-1,2)[peakid]
-        ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,edgecolors='darkgrey',alpha=1)
+        ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,alpha=1)
 
         if plotTimeStamp == True: 
             ax.text(extent[1]-0.07, extent[3]-0.05,"%g"%t, fontsize=5,c='w',horizontalalignment='center',verticalalignment='center')
@@ -1327,11 +1330,11 @@ class Visualiser():
         ax.imshow(rf,extent=extent,interpolation=None)
         peakid= np.argmax(rf)
         peakcoord = self.mazeAgent.discreteCoords.reshape(-1,2)[peakid]
-        ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,edgecolors='darkgrey',alpha=1)
+        ax.scatter(peakcoord[0],peakcoord[1],marker='x',s=130,color='darkgrey',linewidth=4,alpha=1)
         if self.mazeAgent.mazeType == 'loop':
             x = self.mazeAgent.discreteCoords[10,:,0]
         if fitEllipse_ == True: 
-            (X,Y,Z),_= fitEllipse(rf,coords=self.mazeAgent.discreteCoords)
+            (X,Y,Z),_,_= fitEllipse(rf,coords=self.mazeAgent.discreteCoords)
             ax.contour(X, Y, Z, levels=[1], colors=('w'), linewidths=2, linestyles="dashed")
         if show==False:
             plt.close(fig)
@@ -1434,7 +1437,7 @@ class Visualiser():
                             centre += [0.02,-0.03]
                             c='C3'
 
-                    ax.scatter(centre[0],centre[1],marker='x',s=s,color=c,linewidth=linewidth,edgecolors='darkgrey',alpha=alpha)
+                    ax.scatter(centre[0],centre[1],marker='x',s=s,color=c,linewidth=linewidth,alpha=alpha)
                 else:
                     circle = matplotlib.patches.Ellipse((centre[0],centre[1]), 2*self.mazeAgent.sigmas[i], 2*self.mazeAgent.sigmas[i], alpha=0.5, facecolor=color)
                     ax.add_patch(circle)
@@ -1492,6 +1495,10 @@ class Visualiser():
         M_av,M_std = np.mean(M_copy,axis=0),np.std(M_copy,axis=0)
         W_av,W_std = np.mean(W_copy,axis=0),np.std(W_copy,axis=0)
         W_notheta_av,W_notheta_std = np.mean(W_notheta_copy,axis=0),np.std(W_notheta_copy,axis=0)
+
+        # print(f"skew W: {getSkewness(W_av)} vs skew W_notheta: {getSkewness(W_notheta_av)} vs skew M: {getSkewness(M_av)}")
+        # print(f"mass ratio = {np.sum(W_av[:int(len(W_av/2))])/np.sum(W_av[int(len(W_av/2)):])} vs {np.sum(W_notheta_av[:int(len(W_notheta_av/2))])/np.sum(W_notheta_av[int(len(W_notheta_av/2)):])} (no theta)")
+        print(f"mass ratio = {np.sum(W_av[:25])/np.sum(W_av[25:])} vs {np.sum(W_notheta_av[:25])/np.sum(W_notheta_av[25:])} (no theta)")
        
         W_norm = np.maximum(np.max(W_notheta_av),np.max(W_av))
         M_av,M_std = M_av/(np.max(M_av)), M_std/(np.max(M_av))
@@ -1530,25 +1537,25 @@ class Visualiser():
         ax[0].set_xticklabels(['','','','',''])
         ax[1].set_xticks([-2,-1,0,1,2])
         ax[1].set_xticklabels(['','','','',''])
-        ax[0].tick_params(width=2,color='darkgrey')
-        ax[1].tick_params(width=2,color='darkgrey')
+        # ax[0].tick_params(width=2,color='darkgrey')
+        # ax[1].tick_params(width=2,color='darkgrey')
         plt.grid(False)
 
         ax[0].spines['left'].set_position('zero')
-        ax[0].spines['left'].set_color('darkgrey')
+        # ax[0].spines['left'].set_color('darkgrey')
         ax[0].spines['left'].set_linewidth(2)
         ax[0].spines['right'].set_color('none')        
         ax[0].spines['bottom'].set_position('zero')
-        ax[0].spines['bottom'].set_color('darkgrey')
+        # ax[0].spines['bottom'].set_color('darkgrey')
         ax[0].spines['bottom'].set_linewidth(2)
         ax[0].spines['top'].set_color('none')
 
         ax[1].spines['left'].set_position('zero')
-        ax[1].spines['left'].set_color('darkgrey')
+        # ax[1].spines['left'].set_color('darkgrey')
         ax[1].spines['left'].set_linewidth(2)
         ax[1].spines['right'].set_color('none')        
         ax[1].spines['bottom'].set_position('zero')
-        ax[1].spines['bottom'].set_color('darkgrey')
+        # ax[1].spines['bottom'].set_color('darkgrey')
         ax[1].spines['bottom'].set_linewidth(2)
         ax[1].spines['top'].set_color('none')
 
@@ -1556,7 +1563,7 @@ class Visualiser():
         ax[1].legend(frameon=False)    
         return fig, ax
 
-    def plotMetrics(self):
+    def plotMetrics(self,total_time=None):
         t         = []
 
         W_snr         = [] 
@@ -1590,11 +1597,22 @@ class Visualiser():
 
         fig, ax = plt.subplots(2,1,figsize=(1,2),sharex=True)
 
-        ax[1].plot(t,W_snr,c='C1',linewidth=2, label=r"$\theta$")
-        ax[1].plot(t,W_notheta_snr,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
+        thresh = W_r2[-1]*0.5 / W_r2[-1]
+        print(thresh)
+        print(thresh,thresh*W_r2[-1])
+        t_80 = t[np.argmin(np.abs(W_r2 - thresh))] 
+        t_80_notheta = t[np.argmin(np.abs(W_notheta_r2 - thresh))] 
+        print(f"t80 {t_80:.3f} vs t80notheta {t_80_notheta:.3f}")
 
-        ax[0].plot(t,W_r2,c='C1',linewidth=2)
-        ax[0].plot(t,W_notheta_r2,c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
+        end = -1
+        if total_time is not None: 
+            t_last = np.argmin(np.abs(np.array(t) - total_time))
+            end = t_last
+        ax[1].plot(t[:end],W_snr[:end],c='C1',linewidth=2, label=r"$\theta$")
+        ax[1].plot(t[:end],W_notheta_snr[:end],c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7,label=r"No $\theta$")
+
+        ax[0].plot(t[:end],W_r2[:end],c='C1',linewidth=2)
+        ax[0].plot(t[:end],W_notheta_r2[:end],c='C1',linewidth=1.5,linestyle='--', dashes=(1, 1),alpha=0.7)
 
 
 
@@ -1607,8 +1625,8 @@ class Visualiser():
         ax[0].set_xticks([0,15,30])
         ax[0].set_xticklabels(["","",""])
 
-        ax[1].tick_params(width=2,color='darkgrey')
-        ax[0].tick_params(width=2,color='darkgrey')
+        # ax[1].tick_params(width=2,color='darkgrey')
+        # ax[0].tick_params(width=2,color='darkgrey')
         ax[1].set_yticks([0,3,6])
         ax[1].set_yticklabels(["","",""])
         ax[0].set_yticks([0,0.5,1])
@@ -1617,23 +1635,27 @@ class Visualiser():
         for i in range(2):
 
             ax[i].spines['left'].set_position('zero')
-            ax[i].spines['left'].set_color('darkgrey')
+            # ax[i].spines['left'].set_color('darkgrey')
             ax[i].spines['left'].set_linewidth(2)
             ax[i].spines['right'].set_color('none')        
             ax[i].spines['bottom'].set_position('zero')
-            ax[i].spines['bottom'].set_color('darkgrey')
+            # ax[i].spines['bottom'].set_color('darkgrey')
             ax[i].spines['bottom'].set_linewidth(2)
             ax[i].spines['top'].set_color('none')
         
         return fig, ax 
 
 
-    def plotFieldSilhouette(self, N=25, plot_pf=True, plot_pf_M=True, plot_rf=False):
+    def plotFieldSilhouette(self, N=25, plot_pf=True, plot_pf_notheta=False, plot_pf_M=True, plot_rf=False,no_theta=False):
+        hist_id = self.snapshots['t'].sub(30*60).abs().to_numpy().argmin()
+        snapshot = self.snapshots.iloc[hist_id-22]
+
         x = self.mazeAgent.discreteCoords[10,:,0]
         rf = self.mazeAgent.discreteStates[10,:,N]
         pf = self.mazeAgent.getPlaceFields(M=self.mazeAgent.W, threshold=0)[N][10,:]
+        pf_notheta = self.mazeAgent.getPlaceFields(M=snapshot['W_notheta'], threshold=0)[N][10,:]
         pf_M = self.mazeAgent.getPlaceFields(M=self.mazeAgent.M, threshold=0)[N][10,:]
-        rf, pf, pf_M = rf/np.trapz(rf,x), pf/np.trapz(pf,x), pf_M/np.trapz(pf_M,x)
+        rf, pf, pf_notheta, pf_M = rf/np.trapz(rf,x), pf/np.trapz(pf,x), pf_notheta/np.trapz(pf_notheta,x), pf_M/np.trapz(pf_M,x)
 
         fig, ax = plt.subplots(figsize=(2,0.5))
         ax.set_xlim(0,5)
@@ -1643,8 +1665,14 @@ class Visualiser():
             ax.fill_between(x[pf_M>=0],pf_M[pf_M>=0],0,facecolor="C0",alpha=0.5)        
         if plot_pf == True:
             ax.fill_between(x[pf>=0],pf[pf>=0],0,facecolor="C1",alpha=0.5)
+        if plot_pf_notheta == True:
+            ax.fill_between(x[pf_notheta>=0],pf_notheta[pf_notheta>=0],0,facecolor="C1",alpha=0.5)
         
-        hideAxes(ax)
+        pf = self.mazeAgent.getPlaceFields(M=self.mazeAgent.W, threshold=0)[N]
+        pf_notheta = self.mazeAgent.getPlaceFields(M=snapshot['W_notheta'], threshold=0)[N]
+        pf_M = self.mazeAgent.getPlaceFields(M=self.mazeAgent.M, threshold=0)[N]
+        print("R2: M-->W=",Rsquared(pf,pf_M),"M-->Wnotheta=",Rsquared(pf_notheta,pf_M))
+        tpl.xyAxes(ax)
         ax.spines['left'].set_color('none')
         ax.set_xticks([0,2.5,5])
         ax.set_yticks([])
@@ -1693,7 +1721,9 @@ def fitEllipse(image, threshold=0.5,coords=None,verbose=True):
     if verbose == True:
         print("Eccentricity = %.3f" %eccen)
 
-    return (X_coord, Y_coord, Z_coord), eccen
+    angle = np.arctan((1/B)*(C-A-np.sqrt((A-C)**2+B**2)))
+
+    return (X_coord, Y_coord, Z_coord), eccen, angle
 
 def rowAlignMatrix(M):
     M_copy = M.copy()
@@ -1839,3 +1869,6 @@ def getPeak(x,y,smooth=True):
     else:
         peak = x[np.argmax(y)]
     return peak 
+
+def fisherZ(r):
+    return np.log((1+r)/(1-r)) / 2
