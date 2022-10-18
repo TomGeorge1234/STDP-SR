@@ -82,7 +82,7 @@ for t_sr_ in t_sr:
                             fig, ax = plotter.plotMAveraged(time=30)
                             saveFigure(fig,'Mav',specialLocation='../../figures/clusterSweep/Mav_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
 
-                            fig1, ax1 = plotter.plotVarianceAndError()
+                            fig1, ax1 = plotter.plotMetrics()
                             saveFigure(fig1,'Mvar',specialLocation='../../figures/clusterSweep/Mvar_%g_%g_%g_%g_%g_%g_%g.svg' %(int(1000*t_sr_),int(1000*t_stdp_plus_),int(1000*t_stdp_minus_),int(1000*a_stdp_),int(1000*f_),int(1000*k_),int(1000*fr_)),figureDirectory="../../figures/")
                             
                             R_w, R_nw, SNR_w, SNR_nw, skew_w, skew_nw, skew_m, peak_w, peak_nw, peak_m = agent.getMetrics(time=30*60)
