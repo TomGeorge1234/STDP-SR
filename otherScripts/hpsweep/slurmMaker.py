@@ -51,4 +51,3 @@ with open("slurmScript.sh","a") as new:
                                 new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f %f %s %f &" %(t_sr, t_stdp_plus, t_stdp_minus, a_stdp, f, k, fr, traintime))
                                 new.write("\n")
     new.write("wait")
-

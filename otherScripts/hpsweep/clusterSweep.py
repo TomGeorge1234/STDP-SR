@@ -36,6 +36,7 @@ if type(k) != list:
 if type(fr) != list:
     fr = [fr]
 
+print(t_sr, t_stdp_plus, t_stdp_minus, a_stdp, f, k, fr)
 
 
 for t_sr_ in t_sr:
