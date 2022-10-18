@@ -2,24 +2,27 @@ import subprocess
 import numpy as np 
 subprocess.run("rm slurmScript.sh", shell=True)
 
+#first sweep 
+# T_SR = [4]
+# T_STDP_PLUS  = [10e-3,20e-3,25e-3,30e-3,40e-3,50e-3,100e-3]
+# T_STDP_MINUS = [10e-3,20e-3,30e-3,35e-3,40e-3,45e-3,50e-3,100e-3]
+# A_STDP = [-0.2,-0.3,-0.4,-0.5,-0.6,-0.8,-1]
+# F = [0.5]
+# K = [1]
+# FR = [1,3,5,7,10,20,50]
+# traintime = 30 
+
+#seconds sweep (for reviewer)
 T_SR = [4]
-T_STDP_PLUS  = [10e-3,20e-3,25e-3,30e-3,40e-3,50e-3,100e-3]
-T_STDP_MINUS = [10e-3,20e-3,30e-3,35e-3,40e-3,45e-3,50e-3,100e-3]
-A_STDP = [-0.2,-0.3,-0.4,-0.5,-0.6,-0.8,-1]
-F = [0.5]
-K = [1]
-FR = [1,3,5,7,10,20,50]
+T_STDP_PLUS  = [20e-3]
+T_STDP_MINUS = [40e-3]
+A_STDP = [-0.4]
+F = [0.1,0.3,0.5,0.7,0.9]
+K = [0.1,0.3,1,3,10]
+FR = [5.0]
 traintime = 30 
 
-#T_SR = [4]
-#T_STDP_PLUS  = [10e-3,20e-3]
-#T_STDP_MINUS = [10e-3,20e-3]
-#A_STDP =1,3,5,10,20, [-0.1,-0.2]
-#F = [0.5]
-#K = [1]
-#FR = [1]
-
-n_tasks = len(T_SR)*len(T_STDP_PLUS)*len(T_STDP_MINUS)*len(A_STDP)*len(F)*len(K)#*len(FR)
+n_tasks = len(T_SR)*len(T_STDP_PLUS)*len(T_STDP_MINUS)*len(A_STDP)*len(F)*len(K)*len(FR)
 print("%g scripts total" %n_tasks)
 
 pre_schpeel = [
@@ -44,7 +47,8 @@ with open("slurmScript.sh","a") as new:
                 for a_stdp in A_STDP:
                     for f in F:
                         for k in K: 
-                            new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f %f %s %f &" %(t_sr, t_stdp_plus, t_stdp_minus, a_stdp, f, k, str(FR).replace(" ",""), traintime))
-                            new.write("\n")
+                            for fr in FR:
+                                new.write("srun --ntasks=1 --nodes=1 python clusterSweep.py %f %f %f %f %f %f %s %f &" %(t_sr, t_stdp_plus, t_stdp_minus, a_stdp, f, k, fr, traintime))
+                                new.write("\n")
     new.write("wait")
 
