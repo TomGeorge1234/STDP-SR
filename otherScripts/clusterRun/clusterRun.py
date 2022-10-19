@@ -8,6 +8,6 @@ fileName = sys.argv[1]
 
 agent = MazeAgent()
 agent.loadFromFile(fileName,directory="../../savedObjects/")
-agent.runRat(trainTime=1)
-print("YEET")
-# agent.saveToFile(name=fileName)
+agent.dt = 0.001
+agent.runRat(trainTime=120)
+agent.saveToFile(name=fileName + "_run_full",directory="../../savedObjects/")

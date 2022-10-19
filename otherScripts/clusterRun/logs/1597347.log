@@ -1,0 +1,19 @@
+Setting parameters
+Initialising
+   making state/history dataframes
+   initialising velocity, position and direction
+   setting time/run counters
+   making the maze walls
+   discretising position for later plotting
+   handling undefined parameters
+   initialising basis features for learning
+   checking basis cells aren't too close
+     min seperation distance:  10.0 cm
+       3  overlapping pairs
+       1  overlapping pairs
+       0  overlapping pairs
+   calculating state vector at all discretised positions
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=10000.0), HTML(value='')))
+
+   initialising STDP weight matrix and traces
+DONE

@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "clusterRun.py", line 4, in <module>
+Traceback (most recent call last):
+    from mazeAgentUtils import *
+  File "clusterRun.py", line 4, in <module>
+  File "../../mazeAgentUtils.py", line 19, in <module>
+    from mazeAgentUtils import *
+    from plotFormatting import *
+  File "../../mazeAgentUtils.py", line 19, in <module>
+ModuleNotFoundError: No module named 'plotFormatting'
+    from plotFormatting import *
+ModuleNotFoundError: No module named 'plotFormatting'
+srun: error: enc0-node2: task 0: Exited with exit code 1
+srun: error: enc0-node2: task 0: Exited with exit code 1

@@ -31,4 +31,3 @@ srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 0.040000 -0.4
 srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 0.040000 -0.400000 0.900000 1.000000 5.0 30.000000 &
 srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 0.040000 -0.400000 0.900000 3.000000 5.0 30.000000 &
 srun --ntasks=1 --nodes=1 python clusterSweep.py 4.000000 0.020000 0.040000 -0.400000 0.900000 10.000000 5.0 30.000000 &
-wait

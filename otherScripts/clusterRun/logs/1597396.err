@@ -1,0 +1,6 @@
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: got SIGCONT
+slurmstepd-enc2-node1: error: *** JOB 1597396 ON enc2-node1 CANCELLED AT 2021-11-10T14:29:21 ***
+slurmstepd-enc2-node1: error: *** STEP 1597396.0 ON enc2-node1 CANCELLED AT 2021-11-10T14:29:21 ***
+srun: forcing job termination
+srun: error: enc2-node1: task 0: Terminated

@@ -1,0 +1,94 @@
+Setting parameters
+Initialising
+   making state/history dataframes
+   initialising velocity, position and direction
+   setting time/run counters
+   making the maze walls
+   discretising position for later plotting
+   handling undefined parameters
+   initialising basis features for learning
+   checking basis cells aren't too close
+     min seperation distance:  10.0 cm
+       3  overlapping pairs
+       1  overlapping pairs
+       1  overlapping pairs
+       0  overlapping pairs
+   calculating state vector at all discretised positions
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=10000.0), HTML(value='')))
+
+   initialising STDP weight matrix and traces
+DONE
+Loading attributes...done. use 'agent3.__dict__.keys()'  to see avaiable attributes
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=720000.0), HTML(value='')))
+
+Calculating place and grid cells
+Setting parameters
+Initialising
+   making state/history dataframes
+   initialising velocity, position and direction
+   setting time/run counters
+   making the maze walls
+   discretising position for later plotting
+   handling undefined parameters
+   initialising basis features for learning
+   checking basis cells aren't too close
+     min seperation distance:  10.0 cm
+       2  overlapping pairs
+       0  overlapping pairs
+   calculating state vector at all discretised positions
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=10000.0), HTML(value='')))
+
+   initialising STDP weight matrix and traces
+DONE
+Loading attributes...done. use 'agent3.__dict__.keys()'  to see avaiable attributes
+HBox(children=(HTML(value=''), FloatProgress(value=0.0, max=720000.0), HTML(value='')))
+time
+crossed 71.59000000000738
+crossed 174.4999999999138
+crossed 325.7999999997762
+crossed 374.8799999997316
+time
+time
+crossed 635.4449999994946
+crossed 712.6249999994244
+time
+crossed 1035.6349999993952
+crossed 1130.1150000014575
+crossed 1241.09500000388
+time
+crossed 1307.4100000053274
+crossed 1357.100000006412
+crossed 1424.125000007875
+time
+crossed 1669.5100000132313
+crossed 1717.9750000142892
+crossed 1776.2950000155622
+crossed 1836.8350000168837
+crossed 1907.3200000184222
+crossed 1943.2000000192054
+crossed 1960.4700000195824
+crossed 1974.56500001989
+crossed 2025.5900000210038
+crossed 2157.650000023886
+crossed 2248.360000025866
+crossed 2292.05000002682
+crossed 2366.5200000284453
+crossed 2387.8800000289116
+crossed 2424.5350000297117
+crossed 2460.515000030497
+crossed 2637.3300000343565
+crossed 2748.3850000367806
+time
+crossed 3028.825000042902
+time
+crossed 3108.720000044646
+crossed 3154.9600000456553
+crossed 3220.925000047095
+crossed 3294.485000048701
+crossed 3325.410000049376
+crossed 3348.6750000498837
+crossed 3382.535000050623
+crossed 3566.5950000546404
+crossed 3598.465000055336
+
+Calculating place and grid cells

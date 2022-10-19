@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "clusterRun.py", line 10, in <module>
+    agent.loadFromFile(fileName,directory="../../savedObjects/")
+  File "../../mazeAgentUtils.py", line 968, in loadFromFile
+    attributes_dictionary = np.load(directory+name+".npz",allow_pickle=True)['arr_0'].item()
+  File "/nfs/nhome/live/tgeorge/anaconda3/lib/python3.8/site-packages/numpy/lib/npyio.py", line 416, in load
+    fid = stack.enter_context(open(os_fspath(file), "rb"))
+FileNotFoundError: [Errno 2] No such file or directory: '../../savedObjects/$1.npz'
+srun: error: enc2-node7: task 0: Exited with exit code 1

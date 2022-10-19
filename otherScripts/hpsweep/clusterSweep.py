@@ -54,7 +54,7 @@ for t_sr_ in t_sr:
                                 'stateType'           : 'gaussianThreshold', #feature on which to TD learn (onehot, gaussian, gaussianCS, circles, bump)
                                 'movementPolicy'      : 'windowsScreensaver',  #movement policy (raudies, random walk, windows screensaver)
                                 'roomSize'            : 5,          #maze size scaling parameter, metres
-                                'dt'                  : 0.001,       #simulation time disretisation 
+                                'dt'                  : 0.002,       #simulation time disretisation 
                                 'dx'                  : 0.2,       #space discretisation (for plotting, movement is continuous)
                                 'initPos'             : [0.1,0.1],  #initial position [x0, y0], metres
                                 'centres'             : centres,       #array of receptive field positions. Overwrites nCells

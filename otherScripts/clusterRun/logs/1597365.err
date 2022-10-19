@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "clusterRun.py", line 7, in <module>
+    fileName = sys.argv[1]
+IndexError: list index out of range
+srun: error: enc2-node7: task 0: Exited with exit code 1
