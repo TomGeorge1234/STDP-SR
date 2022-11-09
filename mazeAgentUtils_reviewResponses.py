@@ -49,12 +49,16 @@ defaultParams = {
           'TDreg'               : 0.01,       #L2 regularisation 
           
           #STDP params
-          'peakFiringRate'      : 5,          #peak firing rate of a cell (middle of place field, preferred theta phase)
+          'peakFiringRate'      : 5,          #peak firing rate of a cell (middle of place field,preferred theta phase)
           'tau_STDP_plus'       : 20e-3,      #pre trace decay time
           'tau_STDP_minus'      : 40e-3,      #post trace decay time
           'a_STDP'              : -0.4,       #pre-before-post potentiation factor (post-before-pre = 1) 
           'eta'                 : 0.05,       #STDP learning rate
           'baselineFiringRate'  : 0,          #baseline firing rate for cells 
+          'use_full_STDP_rule'  : False,      #whether to use full STDP rule     
+          'online_mapping'      : 'identity',  #how to map CA3-->CA1 during learning
+          'rownorm'             : False,
+            
 
 
           #Theta precession params
@@ -124,6 +128,7 @@ class MazeAgent():
         self.mazeState = {}
         self.history = pd.DataFrame(columns = ['t','pos','delta','runID']) 
         self.snapshots = pd.DataFrame(columns = ['t','M','W','mazeState'])
+        self.spikedata = {'CA3':{'times':[],'ids':[]}, 'CA1':{'times':[],'ids':[]}}
 
         #set pos/vel
         print("   initialising velocity, position and direction")
@@ -328,7 +333,10 @@ class MazeAgent():
                     # print(self.pos)
                     """STDP learning step"""
                     if (STDPLearn == True) and (self.stateType in  ['bump','gaussian', 'gaussianCS','gaussianThreshold', 'circles']):
-                        _ = self.STDPLearningStep(dt = self.t - hist_t[i-1])
+                        if self.use_full_STDP_rule == True:
+                            _ = self.STDPLearningStep_detailed(dt = self.t - hist_t[i-1])
+                        else:
+                            _ = self.STDPLearningStep(dt = self.t - hist_t[i-1])
 
                             
                     """TD learning step"""
@@ -362,11 +370,11 @@ class MazeAgent():
             except KeyboardInterrupt: 
                 print("Keyboard Interrupt:")
                 break
-            except ValueError as error:
-                print("ValueError:")
-                print(error)
-                print(f"   Rat position: {self.pos}")
-                break
+            # except ValueError as error:
+            #     print("ValueError:")
+            #     print(error)
+            #     print(f"   Rat position: {self.pos}")
+            #     break
 
         self.runID += 1
         runHistory = pd.DataFrame({'t':list(hist_t[:i]), 'pos':list(hist_pos[:i]),'delta':list(hist_delta[:i])})
@@ -497,6 +505,99 @@ class MazeAgent():
 
         return thetaFiringRate
 
+    def STDPLearningStep_detailed(self,dt):       
+        """Takes the curent theta phase and estimate firing rates for all basis cells according to a simple theta sweep model. 
+           From here it samples spikes and performs STDP learning on a weight matrix.
+
+        Args:
+            dt (float): Time step length 
+
+        Returns:
+            float array: vector of firing rates for this time step 
+        """   
+        state = self.posToState(self.pos)
+
+        data = ( (state,
+                self.W_notheta,  
+                self.preTrace_notheta,  
+                self.postTrace_notheta,  
+                self.lastSpikeTime_notheta, 
+                self.spikeCount_notheta),
+
+                 (self.thetaModulation(state),
+                self.W,          
+                self.preTrace,          
+                self.postTrace,          
+                self.lastSpikeTime, 
+                self.spikeCount), 
+                )
+
+        
+        for i, (firingRate, W, preTrace, postTrace, lastSpikeTime, spikeCount) in enumerate(data): 
+            preFiringRate_ = self.peakFiringRate * firingRate + self.baselineFiringRate #scale firing rate and add noise
+            if self.online_mapping == "identity":
+                mapMatrix =  np.identity(self.nCells)
+            elif self.online_mapping == "Widentity":
+                mapMatrix =  W + 0.5*np.identity(self.nCells)
+            elif self.online_mapping == "W":
+                mapMatrix =  W
+            else: 
+                mapMatrix = self.online_mapping
+
+            postFiringRate_ = np.maximum(0,np.matmul(mapMatrix,preFiringRate_))
+            firingRate_ = np.concatenate((preFiringRate_,postFiringRate_))
+            layerLabel_ = np.array(['pre']*len(preFiringRate_) + ['post']*len(postFiringRate_))
+            neuronIDs = np.concatenate((np.arange(len(preFiringRate_)), np.arange(len(postFiringRate_))))
+            n_spike_list = np.random.poisson(firingRate_*dt)
+            
+            spikingNeurons = (n_spike_list != 0) #in short time dt cells can spike 0 or 1 time only (good enough approximation) 
+            spikeCount += sum(spikingNeurons)
+            spikeTimes = np.random.uniform(self.t,self.t+dt,len(neuronIDs))[spikingNeurons]
+            spikeIDs = neuronIDs[spikingNeurons]
+            spikeLayerLabels = layerLabel_[spikingNeurons]
+            spikeList = np.vstack((spikeIDs,spikeTimes,spikeLayerLabels)).T
+            spikeList = spikeList[np.argsort(spikeList[:,1])]   
+
+            for spikeInfo in spikeList:
+                cell, time, layer = int(spikeInfo[0]), float(spikeInfo[1]), spikeInfo[2]
+                timeDiff = time - lastSpikeTime 
+
+                preTrace        *= np.exp(- timeDiff / self.tau_STDP_plus) #traces for all cells decay...
+                postTrace       *= np.exp(- timeDiff / self.tau_STDP_minus) #traces for all cells decay...
+                if layer == 'pre':
+                    W[:,cell]       += self.eta * postTrace #weights from presynaptic neuron should decrease when pre fires (post-before-PRE) 
+                    preTrace[cell]  += 1 #update trace 
+                if layer == 'post':
+                    W[cell,:]       += self.eta * preTrace #weights to postsynaptic neuron should increase when post fires (pre-before-POST)
+                    postTrace[cell] += self.a_STDP  #update trace (post trace probably negative)
+
+                lastSpikeTime += timeDiff
+
+            if i == 1: 
+                thetaFiringRate = firingRate_
+        
+        if self.rownorm == True: 
+            # self.W = self.W / np.linalg.norm(self.W,axis=1)[:,np.newaxis]
+            # self.W_notheta = self.W_notheta / np.linalg.norm(self.W_notheta,axis=1)[:,np.newaxis]
+            sumW = np.sum(self.W,axis=1)
+            sumW[sumW<1]=1
+            self.W = self.W / sumW[:,np.newaxis]
+            sumWnt = np.sum(self.W,axis=1)
+            sumWnt[sumWnt<1]=1
+            self.W_notheta = self.W_notheta / sumWnt[:,np.newaxis]
+        
+        #save spike data
+        CA3spiketimes = spikeTimes[spikeLayerLabels=='pre']
+        CA3spikeids = spikeIDs[spikeLayerLabels=='pre']
+        CA1spiketimes = spikeTimes[spikeLayerLabels=='post']
+        CA1spikeids = spikeIDs[spikeLayerLabels=='post']
+        self.spikedata['CA3']['times'].extend(CA3spiketimes)
+        self.spikedata['CA3']['ids'].extend(CA3spikeids)
+        self.spikedata['CA1']['times'].extend(CA1spiketimes)
+        self.spikedata['CA1']['ids'].extend(CA1spikeids)
+
+        return thetaFiringRate
+
     
     def thetaModulation(self, firingRate, position=None, direction=None):
         """Takes a firing rate vector and modulates it to account for theta phase precession
@@ -620,6 +721,7 @@ class MazeAgent():
                 wall = checkResult[1]
                 self.dir = wallBounceOrFollow(self.dir,wall,'bounce')
             self.speed += ornstein_uhlenbeck(dt=dt, x=self.speed, drift=self.speedScale,noise_scale=self.speedScale, coherence_time=5)
+            self.speed = max(0,self.speed)
 
         
         if self.mazeType == 'loop':
@@ -988,7 +1090,7 @@ class MazeAgent():
         print("Loading attributes...",end="")
         for key, value in attributes_dictionary.items():
             setattr(self, key, value)
-        print("done. use 'agent3.__dict__.keys()'  to see avaiable attributes")
+        print("done. use 'agent.__dict__.keys()'  to see available attributes")
 
     
         
@@ -1497,7 +1599,7 @@ class Visualiser():
 
 
     
-    def plotMAveraged(self,time=None, x_ticks=None):
+    def plotMAveraged(self,time=None, x_ticks=None, plot_no_theta=True, color='C1',ylim=None, renorm=True):
         # only works/defined for open loop maze
         if time is not None: 
             hist_id = self.snapshots['t'].sub(time*60).abs().to_numpy().argmin()
@@ -1522,11 +1624,12 @@ class Visualiser():
         # print(f"skew W: {getSkewness(W_av)} vs skew W_notheta: {getSkewness(W_notheta_av)} vs skew M: {getSkewness(M_av)}")
         # print(f"mass ratio = {np.sum(W_av[:int(len(W_av/2))])/np.sum(W_av[int(len(W_av/2)):])} vs {np.sum(W_notheta_av[:int(len(W_notheta_av/2))])/np.sum(W_notheta_av[int(len(W_notheta_av/2)):])} (no theta)")
         print(f"mass ratio = {np.sum(W_av[:25])/np.sum(W_av[25:])} vs {np.sum(W_notheta_av[:25])/np.sum(W_notheta_av[25:])} (no theta)")
-       
-        W_norm = np.maximum(np.max(W_notheta_av),np.max(W_av))
-        M_av,M_std = M_av/(np.max(M_av)), M_std/(np.max(M_av))
-        W_av,W_std = W_av/W_norm, W_std/W_norm
-        W_notheta_av,W_notheta_std = W_notheta_av/W_norm, W_notheta_std/W_norm
+
+        if renorm == True: 
+            W_norm = np.maximum(np.max(W_notheta_av),np.max(W_av))
+            M_av,M_std = M_av/(np.max(M_av)), M_std/(np.max(M_av))
+            W_av,W_std = W_av/W_norm, W_std/W_norm
+            W_notheta_av,W_notheta_std = W_notheta_av/W_norm, W_notheta_std/W_norm
         x = self.mazeAgent.centres[:,0]
         x = x-x[roll]
 
@@ -1544,18 +1647,23 @@ class Visualiser():
         Rsq_wnothetaav = Rsquared(W_notheta,M)
 
         ax[1].plot(x,M_av,c='C0',linewidth=2, label = r" ")
-        ax[0].plot(x,W_av,c='C1',label=r" ",linewidth=2)
+        ax[0].plot(x,W_av,c=color,label=r" ",linewidth=2)
         # ax[1].plot(x,M_theta_av,c='C0',linewidth=1.5,alpha=0.5,linestyle='dotted')
-        ax[0].plot(x,W_notheta_av,c='C1',label=r" ",linewidth=1.5,alpha=0.7,linestyle='--', dashes=(1, 1))
 
         ax[1].fill_between(x,M_av+M_std,M_av-M_std,facecolor='C0',alpha=0.2)
-        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor='C1',alpha=0.2)
-        ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor='C1',alpha=0.2)
+        ax[0].fill_between(x,W_av+W_std,W_av-W_std,facecolor=color,alpha=0.2)
+        if plot_no_theta == True: 
+            ax[0].fill_between(x,W_notheta_av+W_notheta_std,W_notheta_av-W_notheta_std,facecolor=color,alpha=0.2)
+            ax[0].plot(x,W_notheta_av,c=color,label=r" ",linewidth=1.5,alpha=0.7,linestyle='--', dashes=(1, 1))
+
         ax[0].set_yticks([])
         ax[1].set_yticks([])
         ax[0].set_xlim(min(x),max(x))
         ax[1].set_xlim(min(x),max(x))
-        ax[0].set_ylim(min(W_av-W_std),max(W_av+W_std))
+        if ylim is not None: 
+            ax[0].set_ylim(0,ylim)
+        else:
+            ax[0].set_ylim(min(W_av-W_std),max(W_av+W_std))
 
         ticks = (x_ticks or [-2,-1,0,1,2])
         ticklabels = [""]*len(ticks)
